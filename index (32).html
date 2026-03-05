@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Кликер: Атомный Реактор (Классика - Радио Обновление)</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        /* БАЗОВЫЕ СТИЛИ */
+        * { user-select: none; box-sizing: border-box; }
+        body { font-family: 'Consolas', monospace; margin: 0; padding: 0; color: #00ff00; height: 100vh; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; background-color: #0a0f0a; }
+        
+        /* ФОН И АНИМАЦИИ */
+        #bg-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -3; }
+        #bg-image { width: 100%; height: 100%; background-image: url('http://googleusercontent.com/image_generation_content/2'); background-size: cover; background-position: center; }
+        #bg-video { width: 100%; height: 100%; object-fit: cover; display: none; }
+        .bg-darken { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10, 15, 10, 0.85); z-index: -2; pointer-events: none; }
+        .bg-pulse { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(57, 255, 20, 0.05); z-index: -1; pointer-events: none; animation: pulseLight 4s infinite alternate; }
+        @keyframes pulseLight { 0% { opacity: 0.2; } 100% { opacity: 0.8; } }
+
+        /* ИНТЕРФЕЙС И ТЕКСТ */
+        h1 { text-align: center; color: #39ff14; text-shadow: 0 0 15px #39ff14, 0 0 30px #000; font-size: 40px; margin: 20px 0; letter-spacing: 2px; cursor: pointer; transition: 0.2s; }
+        h1:active { transform: scale(0.95); text-shadow: 0 0 25px #39ff14; }
+
+        .game-container { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; flex: 1; padding: 20px; }
+
+        .music-toggle-btn { position: fixed; top: 20px; right: 20px; background: rgba(20, 20, 20, 0.8); border: 2px solid #00ffff; color: #00ffff; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-family: 'Consolas', monospace; font-size: 16px; font-weight: bold; z-index: 1000; transition: 0.2s; backdrop-filter: blur(5px); box-shadow: 0 0 10px rgba(0, 255, 255, 0.3); }
+        .music-toggle-btn:hover { background: #00ffff; color: #000; box-shadow: 0 0 15px #00ffff; }
+
+        /* ПАНЕЛЬ СТАТИСТИКИ */
+        .stats { 
+            font-size: 20px; 
+            padding: 25px 30px; 
+            background: #050a05; 
+            border-radius: 12px; 
+            border: 1px solid #39ff14; 
+            box-shadow: 0 0 15px rgba(57, 255, 20, 0.1); 
+            width: 380px; 
+            text-align: center; 
+            z-index: 10;
+            margin-bottom: 30px; 
+        }
+        .stats p { 
+            margin: 15px 0; 
+            border-bottom: 1px dashed #333; 
+            padding-bottom: 15px; 
+            color: #39ff14; 
+        }
+        .stats p:last-child { 
+            border-bottom: none; 
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        /* ЯДРО РЕАКТОРА */
+        .reactor-core { padding: 30px; background: rgba(20, 30, 20, 0.8); border: 4px solid var(--core-color, #39ff14); border-radius: 50%; width: 300px; height: 300px; display: flex; align-items: center; justify-content: center; flex-direction: column; cursor: pointer; box-shadow: 0 0 60px var(--core-color, #39ff14), inset 0 0 30px var(--core-color, #39ff14); transition: 0.1s; position: relative; backdrop-filter: blur(8px); margin-bottom: 40px; }
+        .reactor-core:active { transform: scale(0.95); box-shadow: 0 0 90px #fff, inset 0 0 60px #fff; background: rgba(57, 255, 20, 0.3); }
+
+        .reactor-core.overheated { border-color: #ff0000 !important; box-shadow: 0 0 100px #ff0000, inset 0 0 50px #ff0000 !important; background: rgba(50, 0, 0, 0.5) !important; cursor: not-allowed; transform: scale(1); }
+        .reactor-core.love-easter-egg { border-color: #ff66b2 !important; box-shadow: 0 0 80px #ff66b2, inset 0 0 40px #ff66b2 !important; background: rgba(255, 102, 178, 0.1) !important; }
+        .reactor-core.love-easter-egg:active { box-shadow: 0 0 120px #ff66b2, inset 0 0 60px #ff66b2 !important; background: rgba(255, 102, 178, 0.25) !important; }
+
+        .falling-heart { position: fixed; top: -50px; color: #ff66b2; z-index: 9999; pointer-events: none; animation: fall linear forwards; text-shadow: 0 0 15px #ff66b2; }
+        @keyframes fall { to { transform: translateY(110vh) rotate(360deg); } }
+
+        .floating-text { position: absolute; color: #fff; font-weight: bold; font-size: 36px; text-shadow: 0 0 10px #39ff14, 0 0 5px #000; pointer-events: none; animation: floatUp 0.8s ease-out forwards; z-index: 100; }
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-120px) scale(1.5); } }
+
+        /* КНОПКИ УПРАВЛЕНИЯ */
+        .controls { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; align-items: center; }
+
+        button.action-btn { background-color: #222; color: #39ff14; border: 2px solid #39ff14; border-radius: 8px; padding: 15px 20px; cursor: pointer; font-family: 'Consolas', monospace; font-size: 18px; font-weight: bold; transition: 0.2s; box-shadow: 0 0 15px rgba(57, 255, 20, 0.2); text-align: center; }
+        button.action-btn:hover { background-color: #39ff14; color: #000; box-shadow: 0 0 25px #39ff14; }
+        
+        button.action-btn.gold { color: #ffcc00; border-color: #ffcc00; box-shadow: 0 0 15px rgba(255, 204, 0, 0.2); }
+        button.action-btn.gold:hover { background-color: #ffcc00; color: #000; box-shadow: 0 0 25px #ffcc00; }
+        
+        button.action-btn.cyan { color: #00ffff; border-color: #00ffff; box-shadow: 0 0 15px rgba(0, 255, 255, 0.2); }
+        button.action-btn.cyan:hover { background-color: #00ffff; color: #000; box-shadow: 0 0 25px #00ffff; }
+
+        button.action-btn.purple { color: #b266ff; border-color: #b266ff; box-shadow: 0 0 15px rgba(178, 102, 255, 0.2); }
+        button.action-btn.purple:hover { background-color: #b266ff; color: #000; box-shadow: 0 0 25px #b266ff; }
+
+        button.settings-btn { background: rgba(50, 50, 50, 0.6); color: #fff; border: 2px solid #aaa; border-radius: 8px; padding: 15px 20px; cursor: pointer; font-family: 'Consolas', monospace; font-size: 18px; transition: 0.2s; }
+        button.settings-btn:hover { background: #aaa; color: #000; box-shadow: 0 0 15px #aaa; }
+
+        .btn-wrapper { position: relative; display: inline-flex; }
+        .badge { position: absolute; top: -10px; right: -10px; background: #ff0000; color: #fff; border-radius: 50%; padding: 4px 10px; font-size: 14px; font-weight: bold; box-shadow: 0 0 10px #ff0000; display: none; }
+
+        /* МОДАЛЬНЫЕ ОКНА И СЕТКА */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
+        .modal-content { background: rgba(15, 15, 15, 0.95); border: 2px solid #39ff14; border-radius: 15px; width: 90%; max-width: 1200px; max-height: 85vh; padding: 30px; position: relative; box-shadow: 0 0 50px rgba(0, 255, 0, 0.3); display: flex; flex-direction: column; }
+        .modal-content.gold-border { border-color: #ffcc00; box-shadow: 0 0 50px rgba(255, 204, 0, 0.3); }
+        .modal-content.grey-border { border-color: #aaa; box-shadow: 0 0 50px rgba(170, 170, 170, 0.3); max-width: 600px;}
+        .modal-content.cyan-border { border-color: #00ffff; box-shadow: 0 0 50px rgba(0, 255, 255, 0.3); max-width: 600px; text-align: center;}
+        .modal-content.purple-border { border-color: #b266ff; box-shadow: 0 0 50px rgba(178, 102, 255, 0.3); max-width: 800px; }
+
+        .close-btn { position: absolute; top: 15px; right: 20px; color: #ff4444; font-size: 40px; font-weight: bold; cursor: pointer; transition: 0.2s; line-height: 1; }
+        .close-btn:hover { color: #ff0000; text-shadow: 0 0 10px #ff0000; transform: scale(1.1); }
+
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; overflow-y: auto; padding-right: 10px; margin-top: 20px; }
+        .grid-container::-webkit-scrollbar, .leaderboard-list::-webkit-scrollbar { width: 8px; }
+        .grid-container::-webkit-scrollbar-track, .leaderboard-list::-webkit-scrollbar-track { background: #111; border-radius: 10px; }
+        .grid-container::-webkit-scrollbar-thumb { background: #39ff14; border-radius: 10px; }
+        .gold-border .grid-container::-webkit-scrollbar-thumb { background: #ffcc00; }
+        .purple-border .leaderboard-list::-webkit-scrollbar-thumb { background: #b266ff; border-radius: 10px; }
+
+        /* КАРТОЧКИ ТОВАРОВ И ДОСТИЖЕНИЙ */
+        .item-card { background-color: rgba(20, 20, 20, 0.9); border: 1px solid #444; border-radius: 8px; padding: 15px; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.5); display: flex; flex-direction: column; justify-content: space-between; }
+        .item-card:hover { border-color: #39ff14; transform: translateY(-3px); box-shadow: 0 6px 15px rgba(57, 255, 20, 0.2); }
+
+        .ach-card { background-color: rgba(20, 20, 20, 0.9); border: 1px solid #444; border-radius: 8px; padding: 15px; opacity: 0.6; transition: 0.3s; display: flex; flex-direction: column; justify-content: space-between; }
+        .ach-card.ready { opacity: 1; border-color: #39ff14; box-shadow: 0 0 15px rgba(57, 255, 20, 0.4); animation: pulseAch 2s infinite; }
+        @keyframes pulseAch { 0% { box-shadow: 0 0 10px rgba(57, 255, 20, 0.2); } 50% { box-shadow: 0 0 25px rgba(57, 255, 20, 0.6); } 100% { box-shadow: 0 0 10px rgba(57, 255, 20, 0.2); } }
+        .ach-card.claimed { opacity: 1; border-color: #ffcc00; background-color: rgba(30, 25, 10, 0.9); }
+        .ach-icon { font-size: 30px; margin-bottom: 10px; }
+
+        /* ОНЛАЙН ТАБЛИЦА */
+        .leaderboard-list { overflow-y: auto; max-height: 60vh; margin-top: 15px; padding-right: 10px; }
+        .lb-row { display: flex; justify-content: space-between; padding: 15px; border-bottom: 1px solid #333; background: rgba(20, 20, 20, 0.6); border-radius: 8px; margin-bottom: 8px; align-items: center; }
+        .lb-row:hover { background: rgba(30, 30, 30, 0.9); }
+        .lb-rank { font-size: 20px; font-weight: bold; width: 50px; color: #888; }
+        .lb-name { flex: 1; font-size: 18px; color: #ddd; }
+        .lb-score { font-size: 18px; color: #b266ff; font-weight: bold; text-align: right; }
+        .lb-player { border: 2px solid #b266ff; background: rgba(178, 102, 255, 0.15); box-shadow: 0 0 15px rgba(178, 102, 255, 0.3); transform: scale(1.02); z-index: 10; position: relative; }
+        .lb-player .lb-rank, .lb-player .lb-name { color: #fff; font-weight: bold; }
+
+        button.claim-btn { width: 100%; padding: 10px; margin-top: 10px; background-color: #39ff14; color: #000; border: none; border-radius: 6px; cursor: pointer; font-family: 'Consolas', monospace; font-size: 14px; font-weight: bold; transition: 0.2s; }
+        button.claim-btn:hover { background-color: #fff; box-shadow: 0 0 15px #fff; }
+        button.buy-btn { width: 100%; padding: 10px; margin-top: 15px; background-color: #222; color: #00ff00; border: 1px solid #00ff00; border-radius: 6px; cursor: pointer; font-family: 'Consolas', monospace; font-size: 16px; font-weight: bold; transition: 0.2s; }
+        button.buy-btn:hover:not(:disabled) { background-color: #39ff14; color: #000; box-shadow: 0 0 15px #39ff14; }
+        button.buy-btn:disabled { background-color: #111; color: #555; border-color: #333; cursor: not-allowed; }
+        button.prestige-btn { background-color: #004444; color: #00ffff; border: 2px solid #00ffff; font-size: 20px; padding: 15px; }
+        button.prestige-btn:hover:not(:disabled) { background-color: #00ffff; color: #000; box-shadow: 0 0 25px #00ffff; }
+        button.prestige-btn:disabled { background-color: #111; color: #555; border-color: #333; cursor: not-allowed; box-shadow: none; }
+        
+        h2.modal-title { text-shadow: 0 0 10px #00ff00; margin: 0 0 10px 0; border-bottom: 2px solid #39ff14; padding-bottom: 15px; text-align: center; }
+        .gold-border h2.modal-title { color: #ffcc00; text-shadow: 0 0 10px #ffcc00; border-bottom: 2px solid #ffcc00; }
+        .grey-border h2.modal-title { color: #fff; text-shadow: 0 0 10px #fff; border-bottom: 2px solid #aaa; }
+        .cyan-border h2.modal-title { color: #00ffff; text-shadow: 0 0 10px #00ffff; border-bottom: 2px solid #00ffff; }
+        .purple-border h2.modal-title { color: #b266ff; text-shadow: 0 0 10px #b266ff; border-bottom: 2px solid #b266ff; }
+
+        .settings-group { margin: 20px 0; text-align: left; }
+        .settings-group label { display: block; color: #ccc; margin-bottom: 10px; font-size: 16px; }
+        .settings-group input[type="text"] { width: 100%; padding: 12px; background: #111; color: #39ff14; border: 1px solid #555; border-radius: 6px; font-family: 'Consolas', monospace; font-size: 16px; }
+        .settings-group input[type="file"] { width: 100%; padding: 10px; background: #222; color: #fff; border: 1px dashed #aaa; border-radius: 6px; cursor: pointer; }
+        
+        button.apply-bg-btn { background-color: #39ff14; color: #000; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-family: 'Consolas', monospace; font-weight: bold; margin-top: 10px; width: 100%; font-size: 16px; transition: 0.2s; }
+        button.apply-bg-btn:hover { background-color: #fff; box-shadow: 0 0 15px #fff; }
+
+        /* УВЕДОМЛЕНИЯ */
+        #notification-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 2000; pointer-events: none; }
+        .notification { background: rgba(15, 15, 15, 0.95); border: 2px solid #39ff14; border-radius: 8px; padding: 15px 20px; color: #fff; box-shadow: 0 0 20px rgba(57, 255, 20, 0.4); animation: slideIn 0.4s ease-out, fadeOut 0.4s ease-in 4s forwards; display: flex; align-items: center; gap: 15px; width: 320px; }
+        @keyframes slideIn { from { transform: translateX(120%); } to { transform: translateX(0); } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; transform: translateY(20px); } }
+    </style>
+</head>
+<body>
+
+    <div id="bg-container">
+        <div id="bg-image"></div>
+        <video id="bg-video" autoplay loop muted playsinline></video>
+        <div class="bg-darken"></div>
+        <div class="bg-pulse"></div>
+    </div>
+    
+    <button class="music-toggle-btn" id="music-btn" onclick="openModal('radio-modal')">📻 РАДИО</button>
+    
+    <h1 onclick="checkSecretCode()">☢ АТОМНЫЙ РЕАКТОР ☢</h1>
+    
+    <div class="game-container">
+        
+        <div class="stats" id="main-stats">
+            <p style="border-bottom: 1px solid #39ff14; padding-bottom: 12px; font-weight: bold; margin-top: 0;" id="display-player-name">Директор: Ожидание...</p>
+            <p>Выработано: <strong style="color: #fff;"><span id="energy">0</span> МВт</strong></p>
+            <p>Уровень престижа: <span id="prestige-lvl" style="color:#00ffff; font-weight:bold;">0</span> (+<span id="prestige-bonus">0</span>% энергии)</p>
+            <p>Мощность сети: <span id="energy-per-sec">0</span> МВт/с</p>
+            <p>Излучение: <span style="color: #ff4444;"><span id="radiation">0.10</span> мкЗв/ч</span></p>
+        </div>
+
+        <div class="reactor-core" id="reactor-core" onclick="clickReactor(event)">
+            <h2 id="reactor-title" style="margin: 0; text-shadow: 0 0 10px #00ff00; color: #fff; font-size: 32px;">АКТИВНАЯ ЗОНА</h2>
+            <p style="font-size: 18px; color: #ccc; margin-top: 15px;">Клик: +<span id="click-power">1</span> МВт</p>
+        </div>
+
+        <div class="controls">
+            <button class="action-btn" onclick="openModal('shop-modal')">МАГАЗИН</button>
+            <div class="btn-wrapper">
+                <button class="action-btn gold" onclick="openModal('ach-modal')">ДОСТИЖЕНИЯ <span id="ach-progress" style="font-size: 14px; color: #fff; font-weight: normal; opacity: 0.8;">(0/90)</span></button>
+                <span id="ach-badge" class="badge">0</span>
+            </div>
+            <button class="action-btn cyan" onclick="openModal('prestige-modal')">ПЕРЕРОЖДЕНИЕ</button>
+            <button class="action-btn purple" onclick="openLeaderboard()">РЕЙТИНГ</button>
+            <button class="settings-btn" onclick="openModal('settings-modal')">НАСТРОЙКИ</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="welcome-modal">
+        <div class="modal-content" style="border-color: #39ff14; box-shadow: 0 0 50px rgba(57, 255, 20, 0.5); max-width: 500px; text-align: center;">
+            <h2 class="modal-title">ДОБРО ПОЖАЛОВАТЬ</h2>
+            <p style="color: #ccc; font-size: 16px;">Введите имя вашей корпорации для участия в онлайн-рейтинге:</p>
+            <input type="text" id="player-name-input" placeholder="Например: Spark Energy" style="width: 100%; padding: 15px; background: #111; color: #39ff14; border: 1px solid #555; border-radius: 6px; font-family: 'Consolas', monospace; font-size: 18px; text-align: center; margin-bottom: 20px;">
+            <button class="buy-btn" onclick="startGameWithName()" style="font-size: 20px; padding: 15px; background-color: #39ff14; color: #000;">ЗАПУСТИТЬ РЕАКТОР</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="radio-modal" onclick="closeModalOutside(event, 'radio-modal')">
+        <div class="modal-content cyan-border" style="max-width: 600px;">
+            <span class="close-btn" onclick="closeModal('radio-modal')">&times;</span>
+            <h2 class="modal-title">📻 РАДИОСТАНЦИЯ</h2>
+            <p style="color: #ccc; margin-bottom: 20px;">Выберите частоту вещания:</p>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
+                <button id="track-btn-1" class="action-btn cyan" style="background: #111; padding: 15px; font-size: 16px;" onclick="playTrack(1)">1. Uranium Rush</button>
+                <button id="track-btn-2" class="action-btn cyan" style="background: #111; padding: 15px; font-size: 16px;" onclick="playTrack(2)">2. Chernobyl Chill</button>
+                <button id="track-btn-3" class="action-btn cyan" style="background: #111; padding: 15px; font-size: 16px;" onclick="playTrack(3)">3. Plutonium Pop</button>
+                <button id="track-btn-4" class="action-btn cyan" style="background: #111; padding: 15px; font-size: 16px;" onclick="playTrack(4)">4. Quantum Groove</button>
+                <button id="track-btn-5" class="action-btn cyan" style="background: #111; padding: 15px; font-size: 16px;" onclick="playTrack(5)">5. Supernova Bass</button>
+                <button id="track-btn-6" class="action-btn cyan" style="background: #111; padding: 15px; font-size: 16px;" onclick="playTrack(6)">6. Fallout Lullaby</button>
+            </div>
+            
+            <button class="settings-btn" style="width:100%; border-color:#ff4444; color:#ff4444; padding: 15px;" onclick="stopMusic()">ВЫКЛЮЧИТЬ ПРИЕМНИК</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="shop-modal" onclick="closeModalOutside(event, 'shop-modal')">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('shop-modal')">&times;</span>
+            <h2 class="modal-title">ИНФРАСТРУКТУРА КОМПЛЕКСА</h2>
+            <div class="grid-container" id="shop-container"></div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="ach-modal" onclick="closeModalOutside(event, 'ach-modal')">
+        <div class="modal-content gold-border">
+            <span class="close-btn" onclick="closeModal('ach-modal')">&times;</span>
+            <h2 class="modal-title" style="color:#ffcc00; border-color:#ffcc00;" id="ach-modal-title">ДОСТИЖЕНИЯ</h2>
+            <div class="grid-container" id="ach-container"></div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="leaderboard-modal" onclick="closeModalOutside(event, 'leaderboard-modal')">
+        <div class="modal-content purple-border">
+            <span class="close-btn" onclick="closeModal('leaderboard-modal')">&times;</span>
+            <h2 class="modal-title" style="color:#b266ff; border-color:#b266ff;">ОНЛАЙН РЕЙТИНГ (МВт/с)</h2>
+            <p style="text-align: center; color: #ccc;">Сравнение вашей станции с реальными игроками.</p>
+            <div class="leaderboard-list" id="leaderboard-list"></div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="prestige-modal" onclick="closeModalOutside(event, 'prestige-modal')">
+        <div class="modal-content cyan-border">
+            <span class="close-btn" onclick="closeModal('prestige-modal')">&times;</span>
+            <h2 class="modal-title" style="color:#00ffff; border-color:#00ffff;">ПРОЕКТ «ПЕРЕРОЖДЕНИЕ»</h2>
+            <p style="color: #ccc; text-align: center;">Сбросьте весь прогресс, чтобы получить бонус энергии.</p>
+            
+            <div style="background: rgba(0, 255, 255, 0.1); padding: 15px; border-radius: 8px; border: 1px dashed #00ffff; margin-bottom: 20px; text-align: center;">
+                <p style="color: #fff; font-size: 18px; margin: 0;">Награда: <strong style="color: #00ffff; text-shadow: 0 0 5px #00ffff;">+1 Уровень Престижа (+100% ко всей энергии)</strong></p>
+            </div>
+            
+            <div style="background: #111; padding: 20px; text-align:center; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="margin-top: 0; margin-bottom: 10px; color: #ffcc00;">Прогресс:</h3>
+                <p style="font-size: 20px; margin: 0 0 10px 0;"><span id="prestige-req-energy" style="color: #00ffff;">0</span> / <span id="prestige-target-energy">5 000 000</span> МВт</p>
+                <div style="width: 100%; background: #222; height: 25px; border-radius: 12px; overflow: hidden;">
+                    <div id="prestige-bar" style="width: 0%; height: 100%; background: #00ffff;"></div>
+                </div>
+            </div>
+            
+            <button id="btn-prestige-action" class="buy-btn" style="background:#004444; color:#00ffff; border-color:#00ffff; font-size:20px; padding:15px;" onclick="performPrestige()" disabled>НЕ ДОСТАТОЧНО ЭНЕРГИИ</button>
+            
+            <h3 style="margin-top: 20px; color: #39ff14; text-align: center;">Скины Ядра (Разблокировка):</h3>
+            <div id="skins-container" style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;"></div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="settings-modal" onclick="closeModalOutside(event, 'settings-modal')">
+        <div class="modal-content grey-border">
+            <span class="close-btn" onclick="closeModal('settings-modal')">&times;</span>
+            <h2 class="modal-title" style="color:#fff; border-color:#aaa;">НАСТРОЙКИ</h2>
+            <div class="settings-group">
+                <label>Изменить имя:</label>
+                <input type="text" id="change-name-input" placeholder="Новое имя...">
+                <button class="apply-bg-btn" onclick="changePlayerName()">Сохранить имя</button>
+            </div>
+            <hr style="border-color:#333; margin:20px 0; width: 100%;">
+            <div class="settings-group">
+                <label>1. Ссылка на фон:</label>
+                <input type="text" id="bg-url-input" placeholder="https://...">
+                <button class="apply-bg-btn" onclick="applyUrlBackground()">Применить ссылку</button>
+            </div>
+            <div style="text-align: center; color: #888; margin: 10px 0;">— ИЛИ —</div>
+            <div class="settings-group">
+                <label>2. С устройства:</label>
+                <input type="file" id="bg-file-input" accept="image/*, video/*" onchange="applyFileBackground(event)">
+            </div>
+            <div class="settings-group" style="margin-top: 30px;">
+                <button class="settings-btn" style="width: 100%; border-color:#ff4444; color:#ff4444;" onclick="resetBackground()">Вернуть стандартный фон</button>
+                <button class="settings-btn" style="width: 100%; border-color:#ff0000; color:#ff0000; margin-top: 15px;" onclick="resetGame()">ПОЛНЫЙ СБРОС ИГРЫ</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification-container"></div>
+
+    <script>
+        // === 1. ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ===
+        let energy = 0, energyPerClick = 1, energyPerSec = 0, totalClicks = 0, hasInteracted = false;
+        let readyAchievements = [], claimedAchievements = [];
+        let prestigeLevel = 0, prestigeBonusMultiplier = 1;
+        let clickTimestamps = [], isOverheated = false;
+        let titleClicks = 0, easterEggActivated = false;
+        let playerName = "Неизвестная Корпорация";
+        let db = null;
+        let currentSkin = '#39ff14';
+        const MAX_CPS = 15;
+
+        // === 2. БЕЗОПАСНАЯ ИНИЦИАЛИЗАЦИЯ FIREBASE ===
+        try {
+            if (typeof firebase !== 'undefined') {
+                const firebaseConfig = {
+                    apiKey: "AIzaSyCdk4q-3-kKae4YYCpxdFziQDs6weHEy3A",
+                    authDomain: "reactor-clicker.firebaseapp.com",
+                    projectId: "reactor-clicker",
+                    storageBucket: "reactor-clicker.firebasestorage.app",
+                    messagingSenderId: "191124471411",
+                    appId: "1:191124471411:web:b2db6316f9d89360ec3406"
+                };
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+            }
+        } catch(e) {}
+
+        // === 3. ДАННЫЕ МАГАЗИНА (20 ШТУК) ===
+        const shopItemsBase = [
+            { id: 'i1', name: 'Урановые стержни', baseCost: 15, currentCost: 15, income: 1, count: 0, desc: 'Автоматический распад топлива' },
+            { id: 'i2', name: 'Водяной насос', baseCost: 100, currentCost: 100, income: 5, count: 0, desc: 'Базовое охлаждение' },
+            { id: 'i3', name: 'Газовая центрифуга', baseCost: 500, currentCost: 500, income: 25, count: 0, desc: 'Обогащение изотопов' },
+            { id: 'i4', name: 'Паровая турбина', baseCost: 2000, currentCost: 2000, income: 120, count: 0, desc: 'Пар в электричество' },
+            { id: 'i5', name: 'Градирня', baseCost: 10000, currentCost: 10000, income: 600, count: 0, desc: 'Башня охлаждения' },
+            { id: 'i6', name: 'Реактор-размножитель', baseCost: 50000, currentCost: 50000, income: 3500, count: 0, desc: 'Топливо из отходов' },
+            { id: 'i7', name: 'Токамак', baseCost: 250000, currentCost: 250000, income: 20000, count: 0, desc: 'Синтез в ловушке' },
+            { id: 'i8', name: 'Коллайдер антиматерии', baseCost: 1500000, currentCost: 1500000, income: 150000, count: 0, desc: 'Энергия аннигиляции' },
+            { id: 'i9', name: 'Сфера Дайсона', baseCost: 10000000, currentCost: 10000000, income: 1000000, count: 0, desc: 'Энергия из звезды' },
+            { id: 'i10', name: 'Сингулярность', baseCost: 100000000, currentCost: 100000000, income: 15000000, count: 0, desc: 'Излучение Хокинга' },
+            { id: 'i11', name: 'Квазар', baseCost: 5000000000, currentCost: 5000000000, income: 250000000, count: 0, desc: 'Излучение активного ядра' },
+            { id: 'i12', name: 'Ядро Галактики', baseCost: 250000000000, currentCost: 250000000000, income: 10000000000, count: 0, desc: 'Энергия миллиардов звезд' },
+            { id: 'i13', name: 'Темная материя', baseCost: 10000000000000, currentCost: 10000000000000, income: 500000000000, count: 0, desc: 'Невидимая масса' },
+            { id: 'i14', name: 'Мультивселенная', baseCost: 1000000000000000, currentCost: 1000000000000000, income: 25000000000000, count: 0, desc: 'Сбор энергии параллельных миров' },
+            { id: 'i15', name: 'Звездный Конвертер', baseCost: 50000000000000000, currentCost: 50000000000000000, income: 1000000000000000, count: 0, desc: 'Сжигание целых планет' },
+            { id: 'i16', name: 'Нейтронная Звезда', baseCost: 2000000000000000000, currentCost: 2000000000000000000, income: 50000000000000000, count: 0, desc: 'Колоссальная плотность' },
+            { id: 'i17', name: 'Квантовая Пена', baseCost: 100000000000000000000, currentCost: 100000000000000000000, income: 3000000000000000000, count: 0, desc: 'Энергия на субатомном уровне' },
+            { id: 'i18', name: 'Разрыв Пространства', baseCost: 5000000000000000000000, currentCost: 5000000000000000000000, income: 150000000000000000000, count: 0, desc: 'Извлечение энергии из времени' },
+            { id: 'i19', name: 'Творец Вселенных', baseCost: 900000000000000000000000, currentCost: 900000000000000000000000, income: 20000000000000000000000, count: 0, desc: 'Создание Большого Взрыва' },
+            { id: 'i20', name: 'Омега-Точка', baseCost: 100000000000000000000000000, currentCost: 100000000000000000000000000, income: 9990000000000000000000000, count: 0, desc: 'Финальная эволюция мироздания' }
+        ];
+        let shopItems = JSON.parse(JSON.stringify(shopItemsBase));
+
+        // Скины ядра
+        const coreSkins = [
+            { reqLevel: 0, color: '#39ff14', name: 'Неон' },
+            { reqLevel: 1, color: '#00bfff', name: 'Плазма' },
+            { reqLevel: 3, color: '#ffcc00', name: 'Солнце' },
+            { reqLevel: 5, color: '#b266ff', name: 'Материя' },
+            { reqLevel: 10, color: '#ff0044', name: 'Кровь' }
+        ];
+
+        // === 4. ГЕНЕРАЦИЯ 90 ДОСТИЖЕНИЙ ===
+        const achievementsList = [];
+        
+        // 1. Клики (10 штук)
+        const clickGoals = [10, 100, 1000, 5000, 10000, 50000, 100000, 250000, 500000, 1000000];
+        clickGoals.forEach(val => {
+            achievementsList.push({ id: `clk_${val}`, icon: '👆', title: `Сделать ${formatNumber(val)} кликов`, desc: 'Раз по реактору', reward: val * 5, condition: () => totalClicks >= val });
+        });
+
+        // 2. Банк (10 штук)
+        const energyGoals = [1e3, 1e5, 1e6, 1e9, 1e12, 1e15, 1e18, 1e21, 1e24, 1e27];
+        energyGoals.forEach(val => {
+            achievementsList.push({ id: `en_${val}`, icon: '🔋', title: `Накопить ${formatNumber(val)} МВт`, desc: 'Энергии в банке', reward: val * 0.01, condition: () => energy >= val });
+        });
+
+        // 3. Мощность (10 штук)
+        const epsGoals = [100, 1e4, 1e6, 1e8, 1e10, 1e12, 1e14, 1e16, 1e18, 1e20];
+        epsGoals.forEach(val => {
+            achievementsList.push({ id: `eps_${val}`, icon: '⚡', title: `Достичь ${formatNumber(val)} МВт/с`, desc: 'Мощности', reward: val * 10, condition: () => energyPerSec >= val });
+        });
+
+        // 4. Постройки (20 построек * 3 уровня = 60 штук)
+        const bldGoals = [1, 25, 50];
+        shopItemsBase.forEach((item, idx) => {
+            bldGoals.forEach(val => {
+                achievementsList.push({ 
+                    id: `bld_${idx}_${val}`, 
+                    icon: '🏗️', 
+                    title: `${item.name} (${val})`, 
+                    desc: 'Построено зданий', 
+                    reward: item.baseCost * val * 2, 
+                    condition: () => (shopItems[idx] && shopItems[idx].count >= val) 
+                });
+            });
+        });
+
+        // === 5. УТИЛИТЫ ===
+        function formatNumber(n) { 
+            if (n < 1e6) return Math.floor(n).toLocaleString('ru-RU'); 
+            const u = ["", " млн", " млрд", " трлн", " квдрлн", " квинтлн", " секстлн", " септлн", " октлн"]; 
+            const i = Math.floor(Math.log(n) / Math.log(1000)) - 1; 
+            return (n / Math.pow(1000, i + 1)).toFixed(2) + u[i]; 
+        }
+
+        function openModal(id) { 
+            document.getElementById(id).style.display = 'flex'; 
+            if (id === 'prestige-modal') updatePrestigeUI(); 
+        }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function closeModalOutside(e, id) { if (e.target.id === id && id !== 'welcome-modal') closeModal(id); }
+        
+        function showNotification(title, desc, icon, colorCode = '') { 
+            const box = document.getElementById('notification-container'); 
+            const notif = document.createElement('div'); 
+            notif.className = 'notification'; 
+            
+            if (colorCode === 'gold') notif.style.borderColor = '#ffcc00'; 
+            else if (colorCode === 'cyan') notif.style.borderColor = '#00ffff'; 
+            else if (colorCode === 'pink') notif.style.borderColor = '#ff66b2'; 
+            else if (colorCode === 'error') notif.style.borderColor = '#ff0000'; 
+            else notif.style.borderColor = '#39ff14';
+            
+            notif.innerHTML = `
+                <div class="icon" style="font-size: 30px;">${icon}</div>
+                <div>
+                    <h4 style="margin: 0 0 5px 0; color: ${notif.style.borderColor};">${title}</h4>
+                    <p style="margin: 0; color: #ccc; font-size: 13px;">${desc}</p>
+                </div>
+            `; 
+            box.appendChild(notif); 
+            setTimeout(() => notif.remove(), 4000); 
+        }
+
+        // === 6. РЕГИСТРАЦИЯ И ОНЛАЙН ===
+        function checkFirstLogin() { 
+            let savedName = localStorage.getItem('nrNameClassic_v3'); 
+            if (savedName) { 
+                playerName = savedName; 
+                document.getElementById('display-player-name').innerText = "Директор: " + playerName; 
+                document.getElementById('welcome-modal').style.display = 'none'; 
+            } else { 
+                document.getElementById('welcome-modal').style.display = 'flex'; 
+            } 
+        }
+
+        function startGameWithName() { 
+            let n = document.getElementById('player-name-input').value.trim(); 
+            playerName = n === "" ? "Анонимная База" : n; 
+            localStorage.setItem('nrNameClassic_v3', playerName); 
+            document.getElementById('display-player-name').innerText = "Директор: " + playerName; 
+            document.getElementById('welcome-modal').style.display = 'none'; 
+            showNotification("Система запущена", "Успешное подключение", "👋"); 
+            
+            try { 
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext; 
+                if (AudioContextClass && !audioCtx) { 
+                    audioCtx = new AudioContextClass(); 
+                    if (audioCtx.state === 'suspended') audioCtx.resume(); 
+                } 
+            } catch(e) {} 
+            hasInteracted = true; 
+            syncScoreWithServer(); 
+        }
+
+        function changePlayerName() { 
+            let n = document.getElementById('change-name-input').value.trim(); 
+            if (n) { 
+                playerName = n; 
+                localStorage.setItem('nrNameClassic_v3', playerName); 
+                document.getElementById('display-player-name').innerText = "Директор: " + playerName; 
+                showNotification("Успешно", "Имя изменено", "📝"); 
+                document.getElementById('change-name-input').value = ""; 
+                closeModal('settings-modal'); 
+            } 
+        }
+
+        function syncScoreWithServer() {
+            if (db && playerName !== "Неизвестная Корпорация" && energyPerSec > 0) {
+                db.collection("leaderboard").doc(playerName).set({ 
+                    name: playerName, 
+                    eps: energyPerSec, 
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp() 
+                }, { merge: true }).catch(err => {});
+            }
+        }
+        setInterval(syncScoreWithServer, 10000);
+
+        async function openLeaderboard() {
+            openModal('leaderboard-modal'); 
+            const list = document.getElementById('leaderboard-list'); 
+            let allEntities = []; 
+            
+            if (db) {
+                list.innerHTML = '<div style="text-align:center; color:#39ff14; padding: 20px;">Подключение к серверам...</div>';
+                try { 
+                    const snap = await db.collection("leaderboard").orderBy("eps", "desc").limit(30).get(); 
+                    snap.forEach(doc => { 
+                        const d = doc.data(); 
+                        allEntities.push({ name: d.name, eps: d.eps, isPlayer: d.name === playerName }); 
+                    }); 
+                } catch(e) { 
+                    list.innerHTML = `<div style="text-align:center; color:#ff0000; padding:20px;"><b>Сервер недоступен</b></div>`; 
+                }
+            }
+            
+            const myRec = allEntities.find(e => e.name === playerName && e.isPlayer);
+            if (!myRec) { 
+                allEntities.push({ name: playerName + " (Вы)", eps: energyPerSec, isPlayer: true }); 
+            } else if (myRec.eps < energyPerSec) { 
+                myRec.eps = energyPerSec; 
+            }
+            
+            allEntities.sort((a, b) => b.eps - a.eps);
+            const unique = []; const seen = new Set(); 
+            for(let e of allEntities) { 
+                if(!seen.has(e.name)) { seen.add(e.name); unique.push(e); } 
+            }
+            
+            if(list.innerHTML.includes('Подключение') || list.innerHTML === '') list.innerHTML = '';
+            
+            unique.forEach((e, i) => { 
+                list.innerHTML += `<div class="lb-row" style="${e.isPlayer ? 'background:rgba(178,102,255,0.2);border:1px solid #b266ff;border-radius:8px;' : 'border-bottom:1px solid #333;'} padding:10px; display:flex; justify-content:space-between;"><b style="color:#888;">#${i + 1}</b><span style="color:${e.isPlayer ? '#fff' : '#ddd'};flex:1;margin-left:10px;">${e.name}</span><span style="color:#b266ff;font-weight:bold;">${formatNumber(e.eps)} МВт/с</span></div>`; 
+            });
+        }
+
+        // === 7. ИГРОВАЯ МЕХАНИКА И СОХРАНЕНИЯ ===
+        
+        function getPrestigeCost() { 
+            return 5000000 * Math.pow(10, prestigeLevel); 
+        }
+
+        function loadGame() { 
+            try {
+                const savedData = localStorage.getItem('nrSave_classic_v4');
+                if (savedData) {
+                    const d = JSON.parse(savedData);
+                    energy = d.e || 0; 
+                    totalClicks = d.tc || 0; 
+                    claimedAchievements = d.ca || []; 
+                    readyAchievements = d.ra || []; 
+                    prestigeLevel = d.pl || 0; 
+                    prestigeBonusMultiplier = 1 + prestigeLevel; 
+                    currentSkin = d.cs || '#39ff14';
+                    
+                    if (d.it) { 
+                        d.it.forEach((savedItem, index) => { 
+                            if (shopItems[index]) { 
+                                shopItems[index].count = savedItem.c || 0; 
+                                shopItems[index].currentCost = savedItem.cc || shopItems[index].baseCost; 
+                            } 
+                        }); 
+                    }
+                } 
+            } catch(e) { console.error("Ошибка загрузки сохранения"); }
+
+            document.documentElement.style.setProperty('--core-color', currentSkin);
+            
+            energyPerClick = 1; 
+            shopItems.forEach(i => { 
+                if (i.count >= 10) energyPerClick += Math.floor(i.count / 10) * Math.max(1, Math.floor(i.income / 2)); 
+            }); 
+            
+            updateUI(); 
+            initShop(); 
+            initAchievements(); 
+            checkAchievementsProgress();
+        }
+
+        function saveGame() { 
+            localStorage.setItem('nrSave_classic_v4', JSON.stringify({ 
+                e: energy, 
+                tc: totalClicks, 
+                ca: claimedAchievements, 
+                ra: readyAchievements, 
+                pl: prestigeLevel, 
+                cs: currentSkin, 
+                it: shopItems.map(i => ({ c: i.count, cc: i.currentCost })) 
+            })); 
+        }
+
+        function resetGame() { 
+            if (confirm("Сбросить весь прогресс? Вы начнете с нуля.")) { 
+                localStorage.clear(); 
+                location.reload(); 
+            } 
+        }
+
+        function triggerOverheat() { 
+            isOverheated = true; 
+            clickTimestamps = []; 
+            playErrorSound(); 
+            
+            document.getElementById('reactor-core').classList.add('overheated'); 
+            document.getElementById('reactor-title').innerText = 'ПЕРЕГРЕВ!'; 
+            document.getElementById('reactor-title').style.color = '#ff0000'; 
+            
+            showNotification("АВАРИЯ", "Сброс давления (5 сек)", "🚨", "error"); 
+            
+            setTimeout(() => { 
+                isOverheated = false; 
+                document.getElementById('reactor-core').classList.remove('overheated'); 
+                if(easterEggActivated) { 
+                    document.getElementById('reactor-title').innerText = "💖 ЛЮБЛЮ ДЕЛЮ 💖"; 
+                    document.getElementById('reactor-title').style.color = '#ff66b2'; 
+                } else { 
+                    document.getElementById('reactor-title').innerText = 'АКТИВНАЯ ЗОНА'; 
+                    document.getElementById('reactor-title').style.color = '#fff'; 
+                }
+            }, 5000); 
+        }
+
+        function clickReactor(e) { 
+            if (isOverheated) return; 
+            
+            if (!hasInteracted) { 
+                hasInteracted = true; 
+                try { 
+                    const A = window.AudioContext || window.webkitAudioContext; 
+                    if(A && !audioCtx) { audioCtx = new A(); audioCtx.resume(); } 
+                } catch(err) {} 
+            } 
+            
+            const now = Date.now(); 
+            clickTimestamps.push(now); 
+            clickTimestamps = clickTimestamps.filter(t => now - t < 1000); 
+            if (clickTimestamps.length > MAX_CPS) { 
+                triggerOverheat(); 
+                return; 
+            } 
+            
+            let power = energyPerClick * prestigeBonusMultiplier;
+            energy += power; 
+            totalClicks++; 
+            playGeigerSound(); 
+            
+            if (e) { 
+                const ft = document.createElement('div'); 
+                ft.className = 'floating-text'; 
+                ft.innerText = '+' + formatNumber(power); 
+                if (easterEggActivated) ft.style.color = '#ff66b2'; 
+                
+                const r = e.currentTarget.getBoundingClientRect(); 
+                ft.style.left = (e.clientX - r.left + (Math.random() * 40 - 20)) + 'px'; 
+                ft.style.top = (e.clientY - r.top - 20) + 'px'; 
+                
+                e.currentTarget.appendChild(ft); 
+                setTimeout(() => ft.remove(), 800); 
+            } 
+            updateUI(); 
+            checkAchievementsProgress(); 
+        }
+
+        function buyItem(idx) { 
+            let i = shopItems[idx]; 
+            if (energy >= i.currentCost) { 
+                energy -= i.currentCost; 
+                i.count++; 
+                i.currentCost = Math.floor(i.baseCost * Math.pow(1.15, i.count)); 
+                
+                if (i.count % 10 === 0) {
+                    energyPerClick += Math.max(1, Math.floor(i.income / 2)); 
+                }
+                
+                updateUI(); 
+                checkAchievementsProgress(); 
+                saveGame(); 
+                syncScoreWithServer(); 
+            } 
+        }
+
+        // === 8. ОБНОВЛЕНИЕ ИНТЕРФЕЙСА ===
+        
+        function updateUI() { 
+            let e = 0; 
+            shopItems.forEach(i => e += i.income * i.count); 
+            energyPerSec = e * prestigeBonusMultiplier; 
+            
+            document.getElementById('energy').innerText = formatNumber(energy); 
+            document.getElementById('energy-per-sec').innerText = formatNumber(energyPerSec); 
+            document.getElementById('radiation').innerText = (0.1 + energyPerSec * 0.000000005).toFixed(2); 
+            document.getElementById('click-power').innerText = formatNumber(energyPerClick * prestigeBonusMultiplier); 
+            document.getElementById('prestige-lvl').innerText = prestigeLevel; 
+            document.getElementById('prestige-bonus').innerText = prestigeLevel * 100; 
+            
+            shopItems.forEach((i, idx) => {
+                const costElem = document.getElementById(`cost-${idx}`); 
+                const lvlElem = document.getElementById(`lvl-${idx}`); 
+                const btnElem = document.getElementById(`btn-${idx}`);
+                
+                if (costElem && lvlElem && btnElem) { 
+                    costElem.innerText = formatNumber(i.currentCost); 
+                    lvlElem.innerText = i.count; 
+                    btnElem.disabled = energy < i.currentCost; 
+                }
+            });
+        }
+
+        function initShop() { 
+            const c = document.getElementById('shop-container'); 
+            if (!c) return; 
+            c.innerHTML = ''; 
+            
+            shopItems.forEach((i, idx) => { 
+                c.innerHTML += `
+                    <div class="item-card">
+                        <div>
+                            <div style="font-size:18px; color:#fff; font-weight:bold;">${i.name}</div>
+                            <div style="color:#39ff14; font-size:14px; margin:5px 0;">Ур. <span id="lvl-${idx}">${i.count}</span></div>
+                            <div style="color:#aaa; font-size:13px;">${i.desc}</div>
+                        </div>
+                        <div>
+                            <div style="margin-top:10px; font-size:14px;">+${formatNumber(i.income)} МВт/с</div>
+                            <div style="margin-top:5px; font-size:14px; color:#ffcc00; font-weight:bold;">
+                                Цена: <span id="cost-${idx}">${formatNumber(i.currentCost)}</span> МВт
+                            </div>
+                            <button class="buy-btn" id="btn-${idx}" ${energy < i.currentCost ? 'disabled' : ''} onclick="buyItem(${idx})">КУПИТЬ</button>
+                        </div>
+                    </div>`; 
+            }); 
+        }
+
+        function checkAchievementsProgress() { 
+            let hasNew = false; 
+            
+            achievementsList.forEach(a => { 
+                if (!claimedAchievements.includes(a.id) && !readyAchievements.includes(a.id)) {
+                    let conditionMet = false;
+                    try { conditionMet = a.condition(); } catch(e) {}
+                    
+                    if (conditionMet) {
+                        readyAchievements.push(a.id); 
+                        hasNew = true; 
+                        showNotification("ДОСТИЖЕНИЕ ВЫПОЛНЕНО!", a.title, "🏆", "gold"); 
+                    }
+                } 
+            }); 
+            
+            if(hasNew) { 
+                initAchievements(); 
+                saveGame(); 
+            } 
+            
+            const achP = document.getElementById('ach-progress');
+            if(achP) achP.innerText = `(${claimedAchievements.length}/${achievementsList.length})`; 
+            
+            const achB = document.getElementById('ach-badge');
+            if(achB) { 
+                achB.style.display = readyAchievements.length > 0 ? 'block' : 'none'; 
+                achB.innerText = readyAchievements.length; 
+            }
+        }
+
+        function claimAchievement(id) { 
+            const idx = readyAchievements.indexOf(id); 
+            if (idx > -1) { 
+                readyAchievements.splice(idx, 1); 
+                claimedAchievements.push(id); 
+                const a = achievementsList.find(x => x.id === id); 
+                energy += a.reward; 
+                showNotification("Награда получена!", `+${formatNumber(a.reward)} МВт`, a.icon, "gold"); 
+                
+                updateUI(); 
+                initAchievements(); 
+                checkAchievementsProgress(); 
+                saveGame(); 
+            } 
+        }
+
+        function initAchievements() { 
+            const c = document.getElementById('ach-container'); 
+            if (!c) return; 
+            c.innerHTML = ''; 
+            
+            achievementsList.forEach(a => { 
+                const isC = claimedAchievements.includes(a.id); 
+                const isR = readyAchievements.includes(a.id); 
+                
+                c.innerHTML += `
+                    <div class="ach-card ${isC?'claimed':(isR?'ready':'')}">
+                        <div>
+                            <div class="ach-icon">${isC||isR?a.icon:'🔒'}</div>
+                            <div style="color:${isC||isR?'#ffcc00':'#fff'};font-weight:bold; margin-bottom:5px;">${a.title}</div>
+                            <div style="color:#aaa;font-size:13px;">${a.desc}</div>
+                        </div>
+                        ${isC?'<div style="color:#ffcc00;margin-top:10px;text-align:center;font-weight:bold;">✓ Получено</div>':(isR?`<button class="claim-btn" onclick="claimAchievement('${a.id}')">ЗАБРАТЬ</button>`:`<div style="color:#666;margin-top:10px;text-align:center;">Награда: ${formatNumber(a.reward)}</div>`)}
+                    </div>`; 
+            }); 
+        }
+
+        function updatePrestigeUI() { 
+            let target = getPrestigeCost();
+            const pReq = document.getElementById('prestige-req-energy'); 
+            if (pReq) pReq.innerText = formatNumber(energy); 
+            
+            const pTar = document.getElementById('prestige-target-energy'); 
+            if (pTar) pTar.innerText = formatNumber(target);
+            
+            const pBar = document.getElementById('prestige-bar'); 
+            if (pBar) pBar.style.width = Math.min(100, (energy / target) * 100) + '%'; 
+            
+            const b = document.getElementById('btn-prestige-action'); 
+            if (b) { 
+                b.disabled = energy < target; 
+                b.innerText = energy >= target ? `НАЧАТЬ ЭРУ ${prestigeLevel + 2}` : 'НЕ ДОСТАТОЧНО ЭНЕРГИИ'; 
+            }
+            
+            const sc = document.getElementById('skins-container');
+            if(sc) {
+                sc.innerHTML = '';
+                coreSkins.forEach(s => {
+                    let u = prestigeLevel >= s.reqLevel; 
+                    let a = u && currentSkin === s.color;
+                    sc.innerHTML += `
+                        <div style="padding:10px 15px; border-radius:8px; border:2px solid ${u ? s.color : '#333'}; background:${u ? 'rgba(20,30,20,0.8)' : '#111'}; cursor:${u ? 'pointer' : 'not-allowed'}; box-shadow:${a ? '0 0 20px ' + s.color : 'none'}; transition:0.2s;" onclick="${u ? `applySkin('${s.color}')` : ''}">
+                            <span style="color:${u ? '#fff' : '#555'}; font-weight:bold;">${u ? s.name : '🔒 Ур. ' + s.reqLevel}</span>
+                        </div>`;
+                });
+            }
+        }
+        
+        function applySkin(c) { 
+            currentSkin = c; 
+            document.documentElement.style.setProperty('--core-color', c); 
+            saveGame(); 
+            updatePrestigeUI(); 
+        }
+
+        function performPrestige() { 
+            let target = getPrestigeCost();
+            if (energy >= target) { 
+                energy = 0; 
+                prestigeLevel++; 
+                prestigeBonusMultiplier = 1 + prestigeLevel; 
+                totalClicks = 0; 
+                energyPerClick = 1; 
+                
+                shopItems.forEach(i => { 
+                    i.count = 0; 
+                    i.currentCost = i.baseCost; 
+                }); 
+                readyAchievements = []; 
+                
+                saveGame(); 
+                initShop(); 
+                initAchievements(); 
+                updateUI(); 
+                
+                showNotification("ПЕРЕРОЖДЕНИЕ", `Мощность удвоена! Цель: ${formatNumber(getPrestigeCost())}`, "🌀", "cyan"); 
+                closeModal('prestige-modal'); 
+            } 
+        }
+
+        // Пасхалка
+        function checkSecretCode() { 
+            titleClicks++; 
+            if (titleClicks >= 5) { 
+                titleClicks = 0; 
+                let code = prompt("СИСТЕМА ПЕРЕОПРЕДЕЛЕНИЯ:"); 
+                if (code && code.trim().toLowerCase() === "люблю делю") { 
+                    easterEggActivated = true; 
+                    energy += 5000000; 
+                    
+                    showNotification("СЕКРЕТ!", "+5 000 000 МВт", "💖", "pink"); 
+                    
+                    const rc = document.getElementById('reactor-core'); 
+                    if (rc) rc.classList.add('love-easter-egg'); 
+                    
+                    const rt = document.getElementById('reactor-title'); 
+                    if (rt) { 
+                        rt.innerText = "💖 ЛЮБЛЮ ДЕЛЮ 💖"; 
+                        rt.style.color = "#ff66b2"; 
+                        rt.style.textShadow = "0 0 15px #ff66b2"; 
+                    }
+                    
+                    let end = Date.now() + 5000; 
+                    let intv = setInterval(() => { 
+                        if (Date.now() > end) {
+                            clearInterval(intv); 
+                        } else { 
+                            const h = document.createElement('div'); 
+                            h.className = 'falling-heart'; 
+                            h.innerText = '💖'; 
+                            h.style.left = Math.random() * 100 + 'vw'; 
+                            h.style.fontSize = (Math.random() * 30 + 20) + 'px'; 
+                            let fd = Math.random() * 3 + 2; 
+                            h.style.animationDuration = fd + 's'; 
+                            document.body.appendChild(h); 
+                            setTimeout(() => h.remove(), fd * 1000); 
+                        } 
+                    }, 100); 
+                    
+                    updateUI(); 
+                } 
+            } 
+        }
+
+        // === 9. МЕДИА И ФОН ===
+        const defaultBgUrl = 'http://googleusercontent.com/image_generation_content/2';
+        
+        function setBackgroundRender(u, isV) { 
+            const i = document.getElementById('bg-image'); 
+            const v = document.getElementById('bg-video'); 
+            if(i && v) { 
+                if(isV) { 
+                    i.style.display='none'; 
+                    v.style.display='block'; 
+                    v.src=u; 
+                } else { 
+                    v.style.display='none'; 
+                    v.src=''; 
+                    i.style.display='block'; 
+                    i.style.backgroundImage=`url('${u}')`; 
+                } 
+            } 
+        }
+        
+        function applyUrlBackground() { 
+            let url = document.getElementById('bg-url-input').value.trim(); 
+            if(!url) return; 
+            let isVideo = url.match(/\.(mp4|webm|ogg)$/i) !== null; 
+            setBackgroundRender(url, isVideo); 
+            localStorage.setItem('nrBgClassic_v4', JSON.stringify({url, isVideo})); 
+            closeModal('settings-modal'); 
+        }
+        
+        function applyFileBackground(e) { 
+            let file = e.target.files[0]; 
+            if(!file) return; 
+            let url = URL.createObjectURL(file); 
+            setBackgroundRender(url, file.type.startsWith('video/')); 
+            closeModal('settings-modal'); 
+        }
+        
+        function resetBackground() { 
+            localStorage.removeItem('nrBgClassic_v4'); 
+            setBackgroundRender(defaultBgUrl, false); 
+            closeModal('settings-modal'); 
+        }
+        
+        let audioCtx = null, currentTrackTimer, isPlaying = false;
+        
+        function playTone(f, t, type='sine') { 
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); 
+            if (audioCtx.state === 'suspended') audioCtx.resume(); 
+            
+            const o = audioCtx.createOscillator(); 
+            const g = audioCtx.createGain(); 
+            o.type = type; 
+            o.frequency.setValueAtTime(f, audioCtx.currentTime); 
+            g.gain.setValueAtTime(0.05, audioCtx.currentTime); 
+            g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + t); 
+            o.connect(g); 
+            g.connect(audioCtx.destination); 
+            o.start(); 
+            o.stop(audioCtx.currentTime + t); 
+        }
+        
+        function stopMusic() { 
+            isPlaying = false; 
+            if (currentTrackTimer) clearTimeout(currentTrackTimer); 
+            document.getElementById('music-btn').innerText = '🔇 Радио: ВЫКЛ'; 
+            
+            for(let i=1; i<=6; i++) { 
+                let btn = document.getElementById('track-btn-' + i); 
+                if (btn) { btn.style.background = '#111'; btn.style.color = '#00ffff'; } 
+            } 
+        }
+        
+        function playTrack(num) { 
+            stopMusic(); 
+            isPlaying = true; 
+            document.getElementById('music-btn').innerText = `📻 Радио: Трек ${num}`; 
+            
+            let activeBtn = document.getElementById('track-btn-' + num); 
+            if (activeBtn) { activeBtn.style.background = '#00ffff'; activeBtn.style.color = '#000'; } 
+            
+            const tracks = { 
+                1: { notes: [440, 0, 440, 0, 880, 0, 440, 440], speed: 150, type: 'square' }, 
+                2: { notes: [200, 220, 180, 150], speed: 600, type: 'triangle' }, 
+                3: { notes: [523, 659, 783, 659, 523, 0, 783, 0], speed: 200, type: 'square' },
+                4: { notes: [261, 329, 392, 523, 392, 329], speed: 120, type: 'sawtooth' },
+                5: { notes: [65, 65, 0, 65, 73, 73, 0, 73, 55, 55, 0, 55], speed: 200, type: 'sawtooth' },
+                6: { notes: [329, 440, 392, 349, 329, 0], speed: 300, type: 'triangle' }
+            }; 
+            
+            let t = tracks[num]; 
+            let step = 0; 
+            
+            function playNextNote() { 
+                if (!isPlaying) return; 
+                let freq = t.notes[step % t.notes.length]; 
+                if (freq > 0) playTone(freq, t.speed/1000, t.type); 
+                step++; 
+                currentTrackTimer = setTimeout(playNextNote, t.speed); 
+            } 
+            playNextNote(); 
+        }
+        
+        function playGeigerSound() { 
+            try { 
+                if (!audioCtx || audioCtx.state === 'suspended') return; 
+                const b = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.01, audioCtx.sampleRate); 
+                const d = b.getChannelData(0); 
+                for (let i=0; i<d.length; i++) d[i] = Math.random()*2-1; 
+                const n = audioCtx.createBufferSource(); 
+                n.buffer = b; 
+                const f = audioCtx.createBiquadFilter(); 
+                f.type = 'highpass'; 
+                f.frequency.value = 2500; 
+                const g = audioCtx.createGain(); 
+                g.gain.value = 0.4; 
+                n.connect(f); 
+                f.connect(g); 
+                g.connect(audioCtx.destination); 
+                n.start(); 
+            } catch(e) {} 
+        }
+        
+        function playErrorSound() { 
+            try { 
+                if (!audioCtx || audioCtx.state === 'suspended') return; 
+                const o = audioCtx.createOscillator(); 
+                const g = audioCtx.createGain(); 
+                o.type = 'sawtooth'; 
+                o.frequency.value = 150; 
+                o.connect(g); 
+                g.connect(audioCtx.destination); 
+                o.start(); 
+                g.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.5); 
+                o.stop(audioCtx.currentTime + 0.5); 
+            } catch(e) {} 
+        }
+
+        // === 10. СТАРТ ИГРЫ ===
+        window.onload = function() {
+            let s = localStorage.getItem('nrBgClassic_v4'); 
+            if(s) { 
+                try { 
+                    const d = JSON.parse(s); 
+                    setBackgroundRender(d.url, d.isVideo); 
+                } catch(e){} 
+            }
+            
+            checkFirstLogin(); 
+            loadGame(); 
+            
+            setInterval(() => { 
+                energy += energyPerSec; 
+                updateUI(); 
+                checkAchievementsProgress(); 
+                saveGame(); 
+                
+                const pModal = document.getElementById('prestige-modal'); 
+                if (pModal && pModal.style.display === 'flex') updatePrestigeUI(); 
+            }, 1000);
+        };
+    </script>
+</body>
+</html>
