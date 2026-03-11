@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ИТД.com - Аккаунты</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212; color: #ffffff;
+            max-width: 600px; margin: 0 auto; padding: 20px;
+        }
+        .card {
+            background-color: #1e1e1e; padding: 20px;
+            border-radius: 12px; margin-bottom: 20px;
+        }
+        h1, h2 { margin-top: 0; }
+        input, textarea {
+            width: 100%; padding: 10px; margin-bottom: 10px;
+            background-color: #2c2c2c; color: #fff; border: 1px solid #444;
+            border-radius: 8px; box-sizing: border-box;
+        }
+        button {
+            background-color: #bb86fc; color: #000; border: none; padding: 10px 15px;
+            border-radius: 8px; cursor: pointer; font-weight: bold; margin-right: 5px;
+        }
+        button:hover { background-color: #9965f4; }
+        button.secondary { background-color: #444; color: #fff; }
+        .hidden { display: none !important; }
+        .post { border-bottom: 1px solid #333; padding: 15px 0; }
+        .post-header { font-weight: bold; color: #bb86fc; margin-bottom: 5px; }
+        .like-btn {
+            background: transparent; color: #bb86fc; border: 1px solid #bb86fc;
+            padding: 5px 10px; margin-top: 10px; cursor: pointer; border-radius: 5px;
+        }
+        .like-btn.liked { background: #bb86fc; color: #000; }
+        .error { color: #cf6679; font-size: 14px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <div id="auth-screen" class="card">
+        <h1>Вход в систему</h1>
+        <div id="auth-error" class="error"></div>
+        
+        <input type="text" id="username" placeholder="Придумай логин (например: user123)">
+        <input type="password" id="password" placeholder="Пароль">
+        
+        <button onclick="login()">Войти</button>
+        <button class="secondary" onclick="register()">Зарегистрироваться</button>
+    </div>
+
+    <div id="main-screen" class="hidden">
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <span>Привет, <b id="current-user-display" style="color: #bb86fc;"></b>!</span>
+                <button class="secondary" onclick="logout()" style="padding: 5px 10px; font-size: 12px;">Выйти</button>
+            </div>
+            <textarea id="post-text" rows="3" placeholder="Напиши что-нибудь..."></textarea>
+            <button onclick="publishPost()">Опубликовать</button>
+        </div>
+
+        <div class="card">
+            <h2>Лента</h2>
+            <div id="feed"></div>
+        </div>
+    </div>
+
+    <script>
+        // БАЗА ДАННЫХ (в памяти браузера)
+        let users = JSON.parse(localStorage.getItem('users')) || {}; 
+        let posts = JSON.parse(localStorage.getItem('posts')) || [];
+        let currentUser = null;
+
+        // Инициализация при загрузке страницы
+        window.onload = () => {
+            const savedSession = localStorage.getItem('currentUser');
+            if (savedSession) {
+                currentUser = savedSession;
+                showMainScreen();
+            }
+        };
+
+        // РЕГИСТРАЦИЯ
+        function register() {
+            const userInp = document.getElementById('username').value.trim();
+            const passInp = document.getElementById('password').value.trim();
+            const errorDiv = document.getElementById('auth-error');
+
+            if (!userInp || !passInp) return errorDiv.innerText = "Заполни все поля!";
+            if (users[userInp]) return errorDiv.innerText = "Пользователь с таким логином уже есть!";
+
+            // Сохраняем нового пользователя
+            users[userInp] = passInp;
+            localStorage.setItem('users', JSON.stringify(users));
+            
+            errorDiv.style.color = "#03dac6"; // Зеленый цвет для успеха
+            errorDiv.innerText = "Регистрация успешна! Теперь нажми 'Войти'.";
+        }
+
+        // ВХОД
+        function login() {
+            const userInp = document.getElementById('username').value.trim();
+            const passInp = document.getElementById('password').value.trim();
+            const errorDiv = document.getElementById('auth-error');
+
+            if (!users[userInp]) return errorDiv.innerText = "Такого пользователя не существует.";
+            if (users[userInp] !== passInp) return errorDiv.innerText = "Неверный пароль!";
+
+            currentUser = userInp;
+            localStorage.setItem('currentUser', currentUser);
+            showMainScreen();
+        }
+
+        // ВЫХОД
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem('currentUser');
+            document.getElementById('main-screen').classList.add('hidden');
+            document.getElementById('auth-screen').classList.remove('hidden');
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('auth-error').innerText = '';
+        }
+
+        // ПЕРЕКЛЮЧЕНИЕ ЭКРАНОВ
+        function showMainScreen() {
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('main-screen').classList.remove('hidden');
+            document.getElementById('current-user-display').innerText = currentUser;
+            renderFeed();
+        }
+
+        // ПУБЛИКАЦИЯ ПОСТА
+        function publishPost() {
+            const textInp = document.getElementById('post-text');
+            const text = textInp.value.trim();
+            if (!text) return;
+
+            const newPost = {
+                id: Date.now(), // Уникальный ID поста на основе времени
+                author: currentUser,
+                content: text.replace(/</g, "&lt;"), // Защита
+                likes: [] // Список логинов тех, кто поставил лайк
+            };
+
+            posts.unshift(newPost); // Добавляем в начало массива
+            localStorage.setItem('posts', JSON.stringify(posts)); // Сохраняем
+            textInp.value = '';
+            renderFeed();
+        }
+
+        // ЛОГИКА ЛАЙКОВ (1 человек = 1 лайк)
+        function toggleLike(postId) {
+            // Находим пост по ID
+            const post = posts.find(p => p.id === postId);
+            if (!post) return;
+
+            // Проверяем, ставил ли текущий пользователь лайк
+            const hasLiked = post.likes.includes(currentUser);
+
+            if (hasLiked) {
+                // Если ставил - убираем логин из списка (отменяем лайк)
+                post.likes = post.likes.filter(user => user !== currentUser);
+            } else {
+                // Если не ставил - добавляем логин в список
+                post.likes.push(currentUser);
+            }
+
+            localStorage.setItem('posts', JSON.stringify(posts));
+            renderFeed(); // Обновляем ленту
+        }
+
+        // ОТРИСОВКА ЛЕНТЫ
+        function renderFeed() {
+            const feedDiv = document.getElementById('feed');
+            feedDiv.innerHTML = ''; // Очищаем старое
+
+            if (posts.length === 0) {
+                feedDiv.innerHTML = '<p style="color: #888;">Пока нет постов. Напиши первый!</p>';
+                return;
+            }
+
+            posts.forEach(post => {
+                const postEl = document.createElement('div');
+                postEl.className = 'post';
+                
+                // Проверяем, лайкнул ли Я этот пост (чтобы закрасить кнопку)
+                const isLikedByMe = post.likes.includes(currentUser);
+                const btnClass = isLikedByMe ? 'like-btn liked' : 'like-btn';
+                const heart = isLikedByMe ? '❤️' : '🤍';
+
+                postEl.innerHTML = `
+                    <div class="post-header">@${post.author}</div>
+                    <div>${post.content}</div>
+                    <button class="${btnClass}" onclick="toggleLike(${post.id})">
+                        ${heart} Лайк (${post.likes.length})
+                    </button>
+                `;
+                feedDiv.appendChild(postEl);
+            });
+        }
+    </script>
+</body>
+</html>
