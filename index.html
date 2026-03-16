@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ultimate Tycoon: VIP Edition 4.4</title>
+    <style>
+        :root { 
+            --neon-blue: #00e5ff; --neon-glow: rgba(0, 229, 255, 0.6); 
+            --bg-dark: #030305; --card-bg: rgba(10, 10, 15, 0.96);
+            --money-green: #2ecc71; --money-glow: rgba(46, 204, 113, 0.5);
+            --crystal-cyan: #00d2ff; --rebirth-purple: #9b59b6;
+            --lore-gold: #f1c40f; --text-main: #ffffff;
+            --danger-red: #ff4757; --vip-gold: #ffb800;
+        }
+
+        * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
+        
+        /* 🔥 Жесткий запрет обновления страницы на уровне документа */
+        html, body { 
+            overscroll-behavior-y: none; 
+            height: 100vh; width: 100vw; overflow: hidden; background: transparent; 
+            color: var(--text-main); font-family: 'Segoe UI', Tahoma, Geneva, sans-serif; 
+            display: flex; flex-direction: column; align-items: center; 
+        }
+
+        /* ОСНОВНЫЕ ФОНЫ */
+        #bg-video { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; z-index: -3; display: none; pointer-events: none; }
+        #bg-layer { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -2; background: #000; transition: background 0.5s ease; background-size: cover; background-position: center; }
+        #bg-darkener { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: -1; backdrop-filter: blur(2px); }
+
+        #save-indicator { position: fixed; top: 25px; right: 25px; background: rgba(46, 204, 113, 0.2); border: 1px solid var(--money-green); color: var(--money-green); padding: 8px 15px; border-radius: 10px; font-weight: bold; font-family: 'Consolas', monospace; opacity: 0; transition: opacity 0.5s; z-index: 99999; text-transform: uppercase; box-shadow: 0 0 10px var(--money-glow); }
+
+        /* ПРОФИЛЬ */
+        #top-profile { position: absolute; top: 20px; left: 20px; background: rgba(15, 10, 25, 0.9); border: 2px solid var(--neon-blue); border-radius: 15px; padding: 10px 20px; display: flex; align-items: center; gap: 15px; cursor: pointer; z-index: 50; box-shadow: 0 0 20px var(--neon-glow); backdrop-filter: blur(10px); transition: 0.3s; }
+        #top-profile:active { transform: scale(0.95); }
+        #top-profile img { width: 50px; height: 50px; border-radius: 10px; border: 2px solid var(--lore-gold); object-fit: cover; }
+        #tp-info { display: flex; flex-direction: column; }
+        #mini-name { color: var(--text-main); font-weight: 900; font-size: 1.1em; text-transform: uppercase; transition: 0.3s; }
+        #mini-level { color: var(--neon-blue); font-size: 0.85em; font-weight: bold; }
+
+        /* СТАТИСТИКА */
+        .dashboard { margin-top: 105px; width: 95%; max-width: 550px; z-index: 10; background: rgba(15, 10, 25, 0.85); backdrop-filter: blur(20px); border-radius: 20px; padding: 15px; border: 1px solid rgba(0, 229, 255, 0.3); display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8); }
+        .stat-box { display: flex; flex-direction: column; align-items: center; background: rgba(0,0,0,0.6); padding: 10px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.05); }
+        .stat-label { font-size: 0.65em; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; font-weight: bold; text-align: center; }
+        .stat-value { font-size: 1.2em; font-weight: 900; font-family: 'Consolas', monospace; text-align: center; }
+
+        /* КЛИКЕР */
+        .click-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; position: relative; perspective: 1200px; }
+        #click-target { 
+            width: 250px; height: 250px; border-radius: 50%; 
+            background: linear-gradient(135deg, #00e5ff, #0055ff); 
+            border: 8px solid #fff; cursor: pointer; 
+            transition: transform 0.05s, box-shadow 0.1s; 
+            box-shadow: 0 15px 0 #003399, 0 0 50px var(--neon-glow); 
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 4em; font-weight: 900; color: white; text-shadow: 0 5px 15px rgba(0,0,0,0.5); 
+            position: relative; z-index: 5; background-size: cover; background-position: center;
+        }
+        #click-target:active { transform: scale(0.92) translateY(15px); box-shadow: 0 5px 0 #003399, 0 0 30px var(--neon-glow); }
+
+        /* 🔥 VIP СКИНИ */
+        .skin-inferno-pulse { background: radial-gradient(circle, #ffb800 0%, #ff0000 60%, #8a0000 100%) !important; border-color: #ffb800 !important; box-shadow: 0 15px 0 #500000, 0 0 80px #ff0000, inset 0 0 30px #ffb800 !important; animation: breatheFire 1.5s ease-in-out infinite alternate !important; text-shadow: 0 0 20px #000 !important; }
+        @keyframes breatheFire { 0% { box-shadow: 0 15px 0 #500000, 0 0 40px #ff0000; } 100% { box-shadow: 0 15px 0 #500000, 0 0 100px #ffb800; } }
+        .skin-galaxy-vortex { background: linear-gradient(90deg, #00e5ff, #8a2be2, #2b00ff, #00e5ff) !important; background-size: 300% 300% !important; border-color: #00e5ff !important; box-shadow: 0 15px 0 #15008a, 0 0 80px #8a2be2 !important; animation: rgbSpin 2s linear infinite !important; }
+        @keyframes rgbSpin { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
+        .skin-glitch-void { background: #050505 !important; border-color: #00ff00 !important; color: #00ff00 !important; box-shadow: 0 15px 0 #004400, 0 0 50px rgba(0,255,0,0.6) !important; text-shadow: 3px 3px 0 #000, -2px -2px 0 #00ff00 !important; animation: hardcoreGlitch 0.2s infinite !important; }
+        @keyframes hardcoreGlitch { 0% { background-position: 0 0; } 20% { background-position: -4px 4px; } 40% { background-position: -4px -4px; } 60% { background-position: 4px 4px; } 80% { background-position: 4px -4px; } 100% { background-position: 0 0; } }
+        .skin-plasma { background: radial-gradient(circle, #ff00ff, #4a00e0) !important; border-color: #ff00ff !important; animation: plasmaPulse 2s infinite alternate !important; }
+        @keyframes plasmaPulse { 0% { box-shadow: 0 15px 0 #2a0080, 0 0 30px #ff00ff; } 100% { box-shadow: 0 15px 0 #2a0080, 0 0 80px #00ffff; filter: hue-rotate(45deg); } }
+        .skin-toxic { background: radial-gradient(circle, #39ff14, #000000) !important; border-color: #39ff14 !important; animation: toxicBubble 1.5s infinite alternate !important; }
+        @keyframes toxicBubble { 0% { box-shadow: 0 15px 0 #003300, 0 0 20px #39ff14; } 100% { box-shadow: 0 15px 0 #003300, 0 0 60px #39ff14, inset 0 0 20px #00ff00; } }
+        .skin-holo { background: repeating-linear-gradient(0deg, rgba(0,255,255,0.1), rgba(0,255,255,0.1) 2px, transparent 2px, transparent 4px) !important; background-color: rgba(0,20,40,0.9) !important; border-color: #00ffff !important; animation: holoFlicker 0.1s infinite !important; color: #00ffff !important; text-shadow: 0 0 10px #00ffff !important;}
+        @keyframes holoFlicker { 0% { opacity: 0.9; } 100% { opacity: 1; } }
+        .skin-god { background: linear-gradient(45deg, #ffd700, #ffffff, #ffd700) !important; background-size: 200% 200% !important; border-color: #ffffff !important; animation: godShine 3s linear infinite !important; color: #000 !important; text-shadow: none !important;}
+        @keyframes godShine { 0% { background-position: 0% 50%; box-shadow: 0 15px 0 #b8860b, 0 0 40px #ffd700; } 100% { background-position: 100% 50%; box-shadow: 0 15px 0 #b8860b, 0 0 100px #ffffff; } }
+
+        /* 🎥 VIP ФОНЫ */
+        .bg-gif-synthwave #bg-layer { background: url('https://media.giphy.com/media/xT9IgzoKnwFNmISR8I/giphy.gif') center/cover no-repeat !important; }
+        .bg-gif-pixelspace #bg-layer { background: url('https://media.giphy.com/media/3o7aD2d7qc9qI0B0xW/giphy.gif') center/cover no-repeat !important; }
+        .bg-gif-neonrain #bg-layer { background: url('https://media.giphy.com/media/5Y9vGjeCzzWe27N72G/giphy.gif') center/cover no-repeat !important; }
+        .bg-gif-matrix #bg-layer { background: url('https://media.giphy.com/media/A2W1Qq8pGpm3S/giphy.gif') center/cover no-repeat !important; }
+        .bg-gif-retro #bg-layer { background: url('https://media.giphy.com/media/l41YcGT5ShJa0nCM0/giphy.gif') center/cover no-repeat !important; }
+        .bg-gif-hole #bg-layer { background: url('https://media.giphy.com/media/3oFzme0bUeE0EXsS1y/giphy.gif') center/cover no-repeat !important; }
+        .bg-gif-city #bg-layer { background: url('https://media.giphy.com/media/1D75Xk7T1qj1m/giphy.gif') center/cover no-repeat !important; }
+
+        /* ЭФФЕКТЫ */
+        .floating-text { position: fixed !important; pointer-events: none; font-weight: 900; z-index: 99999; color: var(--neon-blue); font-size: 2.5em; font-family: 'Consolas', monospace; text-shadow: 0 0 10px #000, 0 0 5px #fff; animation: floatUp 0.8s cubic-bezier(0.1, 0.7, 0.3, 1) forwards; }
+        @keyframes floatUp { 0% { opacity: 1; transform: translate(-50%, 0) scale(0.5); } 25% { transform: translate(-50%, -40px) scale(1.2); } 100% { opacity: 0; transform: translate(-50%, -200px) scale(0.8); } }
+        .particle { position: fixed !important; pointer-events: none; width: 10px; height: 10px; background: var(--neon-blue); border-radius: 50%; box-shadow: 0 0 10px var(--neon-blue), 0 0 20px #fff; z-index: 9998; animation: spark 0.6s cubic-bezier(0.1, 0.8, 0.3, 1) forwards; }
+        @keyframes spark { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0); } }
+
+        /* МЕНЮ */
+        .nav-bar { width: 100%; padding: 20px 10px 40px 10px; display: flex; gap: 12px; overflow-x: auto; background: linear-gradient(to top, rgba(10,5,15,1) 50%, transparent); z-index: 10; scrollbar-width: none; border-top: 2px solid rgba(0, 229, 255, 0.3); }
+        .nav-bar::-webkit-scrollbar { display: none; }
+        .nav-btn { padding: 15px 25px; border-radius: 12px; border: 2px solid var(--neon-blue); background: rgba(20, 10, 30, 0.8); color: var(--text-main); font-weight: 900; cursor: pointer; transition: 0.2s; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 5px 15px rgba(0,0,0,0.6); }
+        .nav-btn:active { transform: scale(0.9); background: var(--neon-blue); color: #000; }
+        .nav-btn-sub { font-size: 0.65em; color: #ccc; margin-top: 5px; font-weight: bold; text-transform: uppercase; }
+
+        /* МОДАЛЬНЫЕ ОКНА И СКРОЛЛ */
+        .modal { position: fixed; bottom: -120%; left: 0; width: 100%; height: 90vh; background: var(--card-bg); z-index: 100; border-radius: 30px 30px 0 0; padding: 30px; transition: 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); display: flex; flex-direction: column; border-top: 4px solid var(--neon-blue); backdrop-filter: blur(25px); box-shadow: 0 -20px 80px rgba(0,0,0,0.9); }
+        .modal.open { bottom: 0; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid rgba(255,255,255,0.05); padding-bottom: 15px; }
+        .modal-header h2 { color: var(--neon-blue); font-size: 1.8em; margin: 0; text-transform: uppercase; letter-spacing: 2px; }
+        .close-btn { font-size: 3.5em; color: var(--danger-red); cursor: pointer; line-height: 0.5; transition: 0.2s; }
+        
+        /* 🔥 ВАЖНО: Запрет прокрутки за пределы окна */
+        .modal-content { flex: 1; overflow-y: auto; padding-bottom: 80px; scrollbar-width: none; overscroll-behavior-y: none; }
+
+        .card { background: rgba(0,0,0,0.4); padding: 20px; border-radius: 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(0, 229, 255, 0.2); transition: 0.2s; }
+        .card:hover { border-color: var(--neon-blue); background: rgba(255,255,255,0.05); }
+        .card-info b { display: block; color: #fff; font-size: 1.2em; margin-bottom: 5px; }
+        .card-info span { font-size: 0.85em; color: #aaa; display: block; line-height: 1.4; max-width: 85%; }
+        .card-info i { font-size: 0.9em; color: var(--neon-blue); font-style: normal; font-weight: 900; margin-top: 8px; display: inline-block; background: rgba(0, 229, 255, 0.1); padding: 4px 10px; border-radius: 6px; }
+
+        /* КНОПКИ */
+        .upg-btn { background: #111; border: 2px solid #333; color: #666; padding: 12px 18px; border-radius: 10px; font-family: 'Consolas', monospace; font-size: 1.1em; font-weight: 900; cursor: not-allowed; transition: 0.2s; min-width: 120px; text-align: center; text-transform: uppercase; }
+        .upg-btn.can-buy { border-color: var(--money-green); color: var(--money-green); background: rgba(46, 204, 113, 0.1); cursor: pointer; box-shadow: inset 0 0 10px rgba(46, 204, 113, 0.2); }
+        .upg-btn.can-buy:active { transform: scale(0.92); }
+        .upg-btn.can-buy-crystal { border-color: var(--crystal-cyan); color: var(--crystal-cyan); background: rgba(0, 229, 255, 0.1); cursor: pointer; box-shadow: inset 0 0 10px rgba(0, 229, 255, 0.2); }
+        .upg-btn.can-buy-crystal:active { transform: scale(0.92); }
+        .upg-btn.claimed-btn { border-color: var(--rebirth-purple); color: var(--rebirth-purple); background: rgba(155, 89, 182, 0.1); cursor: not-allowed; }
+
+        .huge-btn { background: var(--money-green); border: none; padding: 20px; border-radius: 15px; font-weight: 900; cursor: pointer; color: #000; box-shadow: 0 6px 0 #1e9a50; transition: 0.1s; font-family: 'Consolas', monospace; font-size: 1.2em; width: 100%; margin-bottom: 15px; text-transform: uppercase; }
+        .huge-btn:active { transform: translateY(5px); box-shadow: 0 1px 0 #1e9a50; }
+        .huge-btn:disabled { background: #333 !important; color: #777 !important; box-shadow: none !important; cursor: not-allowed !important; transform: translateY(0) !important; background-image: none !important; }
+
+        .auth-container { background: rgba(15,10,25,0.95); padding: 40px; border-radius: 25px; border: 2px solid var(--neon-blue); width: 90%; max-width: 450px; text-align: center; box-shadow: 0 0 50px rgba(0,0,0,0.8); }
+        .auth-input { width: 100%; padding: 20px; margin-bottom: 15px; border-radius: 12px; border: 2px solid #333; background: #000; color: #fff; font-size: 1.2em; text-align: center; font-family: 'Consolas', monospace; transition: 0.3s; }
+        .auth-input:focus { border-color: var(--neon-blue); }
+
+        .tab-box { display: flex; gap: 10px; margin-bottom: 20px; background: rgba(0,0,0,0.6); padding: 8px; border-radius: 15px; }
+        .tab-btn { flex: 1; padding: 15px; border-radius: 10px; border: none; background: transparent; color: #888; cursor: pointer; font-weight: 900; transition: 0.3s; text-transform: uppercase; font-size: 0.9em; }
+        .tab-btn.active { background: var(--neon-blue); color: #000; box-shadow: 0 0 20px var(--neon-glow); }
+
+        .bg-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+        .bg-card { background: rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 15px 5px; text-align: center; cursor: pointer; transition: 0.2s; font-weight: bold; font-size: 0.9em; }
+        .bg-card:hover { border-color: var(--neon-blue); background: rgba(0, 229, 255, 0.1); }
+        
+        .skin-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px; }
+        .skin-preview { width: 100%; height: 75px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.2); cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; font-weight: bold; text-shadow: 0 0 5px #000; font-size: 0.8em; text-align: center;}
+        .skin-preview:hover { border-color: var(--vip-gold); transform: scale(1.05); z-index: 5; position: relative;}
+        .skin-preview.locked { filter: grayscale(1); opacity: 0.3; cursor: not-allowed; position: relative; }
+        .skin-preview.locked::after { content: '🔒'; position: absolute; top:50%; left:50%; transform: translate(-50%, -50%); font-size: 1.5em; }
+
+        .top-player { display: flex; align-items: center; padding: 18px; background: rgba(255,255,255,0.03); border-radius: 18px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 12px; }
+        .top-rank { font-size: 1.6em; font-weight: 900; width: 60px; text-align: center; color: #666; }
+        .top-player.rank-1 { background: linear-gradient(90deg, rgba(241, 196, 15, 0.15), rgba(255,255,255,0.05)); border-color: var(--lore-gold); }
+        .top-player.rank-1 .top-rank { color: var(--lore-gold); text-shadow: 0 0 15px rgba(241,196,15,0.6); }
+        .top-player.rank-2 { background: linear-gradient(90deg, rgba(224, 224, 224, 0.1), rgba(255,255,255,0.05)); border-color: #e0e0e0; }
+        .top-player.rank-2 .top-rank { color: #e0e0e0; text-shadow: 0 0 10px rgba(224,224,224,0.4); }
+        .top-player.rank-3 { background: linear-gradient(90deg, rgba(205, 127, 50, 0.1), rgba(255,255,255,0.05)); border-color: #cd7f32; }
+        .top-player.rank-3 .top-rank { color: #cd7f32; text-shadow: 0 0 10px rgba(205,127,50,0.4); }
+        .top-details { flex: 1; padding-left: 15px; }
+        .top-name { font-weight: 900; font-size: 1.2em; color: #fff; text-transform: uppercase; margin-bottom: 5px; }
+        .top-score { color: var(--money-green); font-family: 'Consolas', monospace; font-size: 1.1em; font-weight: bold; }
+    </style>
+</head>
+<body class="bg-default">
+
+    <audio id="game-music" loop></audio>
+    <video id="bg-video" autoplay loop muted playsinline></video>
+    
+    <div id="bg-layer"></div>
+    <div id="bg-darkener"></div>
+    <div id="save-indicator">СОХРАНЕНО ✓</div>
+
+    <div id="name-screen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:9999; display:none; flex-direction:column; justify-content:center; align-items:center;">
+        <h1 style="color:var(--neon-blue); font-size: 4em; text-shadow: 0 0 40px var(--neon-glow); margin-bottom: 0px; text-align:center;">ULTIMATE<br>TYCOON</h1>
+        <p style="color:var(--neon-blue); margin-bottom: 40px; letter-spacing: 8px; font-weight: 900; text-transform: uppercase; opacity: 0.5;">Update 4.4: Hotfix</p>
+        <div class="auth-container">
+            <div id="form-login">
+                <input type="text" id="l-u" class="auth-input" placeholder="Ваш Логин">
+                <input type="password" id="l-p" class="auth-input" placeholder="Ваш Пароль">
+                <button class="huge-btn" style="background:var(--neon-blue); box-shadow: 0 6px 0 #0097a7;" id="btn-login">ВОЙТИ В ИГРУ</button>
+                <p style="margin-top:20px; color:#888; cursor:pointer;" id="toggle-reg">Нет аккаунта? <span style="color:var(--neon-blue);">Создать</span></p>
+            </div>
+            <div id="form-reg" style="display:none;">
+                <input type="text" id="r-u" class="auth-input" placeholder="Новый Логин">
+                <input type="password" id="r-p" class="auth-input" placeholder="Новый Пароль">
+                <button class="huge-btn" id="btn-reg" style="background:var(--lore-gold); box-shadow: 0 6px 0 #d4ac0d;">РЕГИСТРАЦИЯ</button>
+                <p style="margin-top:20px; color:#888; cursor:pointer;" id="toggle-login">Уже есть аккаунт? <span style="color:var(--neon-blue);">Войти</span></p>
+            </div>
+            <p id="auth-status" style="color:var(--danger-red); margin-top:20px; font-size:1.1em; font-weight:bold; min-height: 1.2em;"></p>
+        </div>
+    </div>
+
+    <div id="top-profile" onclick="openModal('profile-modal')">
+        <img id="mini-avatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png">
+        <div id="tp-info"><div id="mini-name">Игрок</div><div id="mini-level">Ур. 0</div></div>
+    </div>
+
+    <div class="dashboard">
+        <div id="vip-status-box" class="stat-box" style="display:none; grid-column: span 3; background: linear-gradient(90deg, rgba(255,184,0,0.2), rgba(255,0,0,0.2)); border-color: var(--vip-gold);">
+            <span class="stat-label" style="color:var(--vip-gold); font-size:0.8em; margin-bottom: 2px;">👑 VIP БОНУСЫ АКТИВНЫ</span>
+            <span class="stat-value" style="color:#fff; font-size:1em; font-weight: bold;">МНОЖИТЕЛЬ x2 + АВТОКЛИКЕР 🤖</span>
+        </div>
+        <div class="stat-box"><span class="stat-label">💰 Капитал</span><span id="score" class="stat-value" style="color:var(--money-green);">0</span></div>
+        <div class="stat-box"><span class="stat-label">💎 Кристаллы</span><span id="crystals" class="stat-value" style="color:var(--crystal-cyan);">0</span></div>
+        <div class="stat-box"><span class="stat-label">📈 Доход/с</span><span id="income-val" class="stat-value" style="color:#fff;">0</span></div>
+        <div class="stat-box"><span class="stat-label">🌌 Уровень</span><span id="rebirth-level-disp" class="stat-value" style="color:var(--rebirth-purple);">0</span></div>
+        <div class="stat-box"><span class="stat-label">⚡ Множ.</span><span id="multiplier" class="stat-value" style="color:#fff;">x1.0</span></div>
+        <div class="stat-box"><span class="stat-label">🖱️ Клик</span><span id="click-power" class="stat-value" style="color:#fff;">1</span></div>
+    </div>
+
+    <main class="click-area">
+        <div id="click-target">TAP!</div>
+    </main>
+
+    <div class="nav-bar">
+        <button class="nav-btn" onclick="openModal('shop-modal')">🏪 РЫНОК<span class="nav-btn-sub">Бизнес</span></button>
+        <button class="nav-btn" onclick="openModal('crystal-modal')">💎 АЛМАЗЫ<span class="nav-btn-sub">Артефакты</span></button>
+        <button class="nav-btn" onclick="openModal('achieve-modal')">🏆 НАГРАДЫ<span class="nav-btn-sub">Задачи</span></button>
+        <button class="nav-btn" style="border-color:var(--vip-gold); color:var(--vip-gold); box-shadow: 0 0 15px rgba(255,184,0,0.4);" onclick="openModal('vip-modal')">👑 VIP КЛУБ<span class="nav-btn-sub" style="color:#fff;">Донат</span></button>
+        <button class="nav-btn" onclick="openModal('leaderboard-modal')">👑 ТОП<span class="nav-btn-sub">Игроков</span></button>
+        <button class="nav-btn" onclick="openModal('settings-modal')">⚙️ ОПЦИИ<span class="nav-btn-sub">Настройки</span></button>
+        <button class="nav-btn" style="border-color:var(--rebirth-purple); color:var(--rebirth-purple);" onclick="openModal('prestige-modal')">🌌 ПРЕСТИЖ<span class="nav-btn-sub" style="color:#fff;">Сброс</span></button>
+    </div>
+
+    <div id="overlay" onclick="closeAll()" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:none; z-index:80; backdrop-filter:blur(5px);"></div>
+
+    <div id="vip-modal" class="modal">
+        <div class="modal-header"><h2 style="color:var(--vip-gold); text-shadow: 0 0 20px rgba(255,184,0,0.5);">Элитный VIP Клуб</h2><span class="close-btn" onclick="closeAll()">×</span></div>
+        <div class="modal-content" style="text-align:center;">
+            
+            <div id="vip-promo-box">
+                <p style="color:#ccc; line-height:1.6; margin-bottom:25px; font-size:1.1em; max-width: 90%; margin-left: auto; margin-right: auto;">
+                    VIP-статус дает невероятные преимущества:<br><br>
+                    🤖 <b style="color:var(--money-green);">АВТОКЛИКЕР:</b> Игра сама фармит деньги!<br>
+                    🤑 <b style="color:var(--money-green);">ДОХОД x2:</b> Вечный множитель на весь заработок!<br>
+                    🎥 <b style="color:var(--vip-gold);">GIF-ФОНЫ:</b> Потрясающие анимации на задний план.<br>
+                    🔥 <b style="color:var(--vip-gold);">СКИНИ:</b> Эффектные переливания для кнопки клика.<br>
+                    👑 <b style="color:var(--vip-gold);">ЗОЛОТОЙ НИК:</b> Корона в профиле и уважение.
+                </p>
+                <a href="https://t.me/Timyr12_bot" target="_blank" style="text-decoration: none;">
+                    <button class="huge-btn" style="background:linear-gradient(90deg, #0088cc, #005f8f); box-shadow: 0 6px 0 #003f5f; color:#fff; font-size:1.2em; padding:20px;">💎 КУПИТЬ VIP В ТЕЛЕГРАМ</button>
+                </a>
+            </div>
+
+            <div style="height: 2px; background: #333; margin: 30px 0;"></div>
+
+            <h3 style="color:#fff; margin-bottom:15px; text-transform:uppercase; letter-spacing:1px;">🔥 VIP СКИНИ НА КНОПКУ (7 ШТ)</h3>
+            <div class="skin-grid" id="vip-skins-list">
+                <div class="skin-preview skin-inferno-pulse locked" onclick="applySkin('vip-fire')">INFERNO</div>
+                <div class="skin-preview skin-galaxy-vortex locked" onclick="applySkin('vip-space')">VORTEX</div>
+                <div class="skin-preview skin-glitch-void locked" onclick="applySkin('vip-matrix')">GLITCH</div>
+                <div class="skin-preview skin-plasma locked" onclick="applySkin('vip-plasma')">PLASMA</div>
+                <div class="skin-preview skin-toxic locked" onclick="applySkin('vip-toxic')">TOXIC</div>
+                <div class="skin-preview skin-holo locked" onclick="applySkin('vip-holo')">HOLOGRAM</div>
+                <div class="skin-preview skin-god locked" onclick="applySkin('vip-god')">GOD MODE</div>
+            </div>
+
+            <h3 style="color:#fff; margin-bottom:15px; margin-top: 30px; text-transform:uppercase; letter-spacing:1px;">🎥 VIP ЖИВЫЕ ФОНЫ (7 ШТ)</h3>
+            <div class="skin-grid" id="vip-bgs-list">
+                <div class="skin-preview locked" style="background: url('https://media.giphy.com/media/xT9IgzoKnwFNmISR8I/giphy.gif') center/cover; color:#fff;" onclick="setBgClass('gif-synthwave')">SYNTH</div>
+                <div class="skin-preview locked" style="background: url('https://media.giphy.com/media/3o7aD2d7qc9qI0B0xW/giphy.gif') center/cover; color:#fff;" onclick="setBgClass('gif-pixelspace')">SPACE</div>
+                <div class="skin-preview locked" style="background: url('https://media.giphy.com/media/5Y9vGjeCzzWe27N72G/giphy.gif') center/cover; color:#fff;" onclick="setBgClass('gif-neonrain')">NEON</div>
+                <div class="skin-preview locked" style="background: url('https://media.giphy.com/media/A2W1Qq8pGpm3S/giphy.gif') center/cover; color:#fff;" onclick="setBgClass('gif-matrix')">MATRIX</div>
+                <div class="skin-preview locked" style="background: url('https://media.giphy.com/media/l41YcGT5ShJa0nCM0/giphy.gif') center/cover; color:#fff;" onclick="setBgClass('gif-retro')">RETRO</div>
+                <div class="skin-preview locked" style="background: url('https://media.giphy.com/media/3oFzme0bUeE0EXsS1y/giphy.gif') center/cover; color:#fff;" onclick="setBgClass('gif-hole')">BLACK HOLE</div>
+                <div class="skin-preview locked" style="background: url('https://media.giphy.com/media/1D75Xk7T1qj1m/giphy.gif') center/cover; color:#fff;" onclick="setBgClass('gif-city')">CITY</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="shop-modal" class="modal"><div class="modal-header"><h2>Галактический Рынок</h2><span class="close-btn" onclick="closeAll()">×</span></div><div id="shop-items" class="modal-content"></div></div>
+    <div id="crystal-modal" class="modal"><div class="modal-header"><h2>Алмазный Зал</h2><span class="close-btn" onclick="closeAll()">×</span></div><div style="background:rgba(0,229,255,0.05); padding:20px; border-radius:20px; text-align:center; border:2px solid var(--shards); margin-bottom:20px;"><span style="color:#bdc3c7; font-weight:bold;">БАЛАНС:</span><br><b id="crystal-balance-disp" style="font-size:2.5em; color:var(--crystal-cyan);">0 💎</b></div><div id="crystal-items" class="modal-content"></div></div>
+    <div id="achieve-modal" class="modal"><div class="modal-header"><h2>Книга Свершений</h2><span class="close-btn" onclick="closeAll()">×</span></div><div id="achieve-items" class="modal-content"></div></div>
+    
+    <div id="leaderboard-modal" class="modal">
+        <div class="modal-header"><h2>Пантеон Магнатов</h2><span class="close-btn" onclick="closeAll()">×</span></div>
+        <div class="tab-box">
+            <button class="tab-btn active" id="tab-score" onclick="renderLeaderboard('score')">💰 КАПИТАЛ</button>
+            <button class="tab-btn" id="tab-rebirths" onclick="renderLeaderboard('rebirths')">🌌 УРОВНИ</button>
+            <button class="tab-btn" id="tab-time" onclick="renderLeaderboard('playTime')">⏳ ВРЕМЯ</button>
+        </div>
+        <div id="leaderboard-items" class="modal-content"></div>
+    </div>
+    
+    <div id="settings-modal" class="modal">
+        <div class="modal-header"><h2>Опции Игры</h2><span class="close-btn" onclick="closeAll()">×</span></div>
+        <div class="modal-content">
+            
+            <div id="vip-settings-section" style="display:none;">
+                <h3 style="color:var(--vip-gold); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 15px;">👑 НАСТРОЙКИ VIP АВТОКЛИКЕРА</h3>
+                <div style="display:flex; gap:10px; margin-bottom:20px;">
+                    <button id="btn-toggle-ac" class="huge-btn" style="flex:1; padding:15px; font-size:0.95em;" onclick="toggleAutoClicker()">🤖 АВТОКЛИК: ВКЛ</button>
+                    <button id="btn-toggle-ac-vis" class="huge-btn" style="flex:1; padding:15px; font-size:0.95em;" onclick="toggleAutoClickerVisuals()">✨ ЭФФЕКТЫ: ВКЛ</button>
+                </div>
+            </div>
+
+            <h3 style="color:var(--neon-blue); border-bottom: 1px solid #333; padding-bottom: 5px; margin-top: 10px; margin-bottom: 15px;">🖼️ СТАТИЧНЫЕ ФОНЫ (Без анимации)</h3>
+            <p style="color:#aaa; font-size:0.85em; margin-bottom:10px;">При выборе картинки или цвета видео-фон отключится.</p>
+            <div class="bg-grid">
+                <div class="bg-card" onclick="setBg('#030305')">Темный</div>
+                <div class="bg-card" onclick="setBg('#1a0b2e')">Пурпурный</div>
+                <div class="bg-card" onclick="setBg('url(https://images.unsplash.com/photo-1534796636912-3b95b3ab5986) center/cover no-repeat')">Космос</div>
+                <div class="bg-card" onclick="setBg('url(https://images.unsplash.com/photo-1550745165-9bc0b252726f) center/cover no-repeat')">Кибер</div>
+            </div>
+            <button class="huge-btn" style="background:var(--lore-gold); color:#000; padding:12px; font-size:1em;" onclick="document.getElementById('bg-upload').click()">🖼️ СВОЙ ФОН (JPG/PNG)</button>
+            <input type="file" id="bg-upload" accept="image/*" style="display:none" onchange="uploadCustomBg(event)">
+
+            <h3 style="color:var(--neon-blue); border-bottom: 1px solid #333; padding-bottom: 5px; margin-top: 20px; margin-bottom: 15px;">🎥 ВИДЕО ФОНЫ (HD Видео)</h3>
+            <p style="color:#aaa; font-size:0.85em; margin-bottom:10px;">Видео перекроет обычные фоны.</p>
+            <div class="bg-grid">
+                <div class="bg-card" onclick="setVideoBg('https://i.imgur.com/7Z8s0QG.mp4')">Synthwave</div>
+                <div class="bg-card" onclick="setVideoBg('https://i.imgur.com/1O8kZ2K.mp4')">Space</div>
+                <div class="bg-card" onclick="setVideoBg('https://i.imgur.com/uR1O9Oq.mp4')">Particles</div>
+            </div>
+            <button class="huge-btn" style="background:linear-gradient(90deg, #ff007f, #7a00ff); color:#fff; box-shadow: 0 6px 0 #5a00bf; padding:12px; font-size:1em;" onclick="document.getElementById('video-upload').click()">🎬 ЗАГРУЗИТЬ СВОЕ ВИДЕО (MP4)</button>
+            <input type="file" id="video-upload" accept="video/*" style="display:none" onchange="uploadCustomVideo(event)">
+
+            <h3 style="color:var(--neon-blue); border-bottom: 1px solid #333; padding-bottom: 5px; margin-top: 20px; margin-bottom: 15px;">🎵 АУДИО И МУЗЫКА</h3>
+            <div class="bg-grid">
+                <div class="bg-card" onclick="setMusic('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3')">Lo-Fi</div>
+                <div class="bg-card" onclick="setMusic('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3')">Phonk</div>
+                <div class="bg-card" onclick="setMusic('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3')">Cyber</div>
+                <div class="bg-card" onclick="setMusic('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3')">Synth</div>
+                <div class="bg-card" onclick="setMusic('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-17.mp3')">Dark</div>
+                <div class="bg-card" onclick="setMusic('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3')">Chill</div>
+            </div>
+            <button class="huge-btn" style="background:var(--rebirth-purple); box-shadow: 0 6px 0 #7a0e2a;" onclick="document.getElementById('music-upload').click()">📁 СВОЯ МУЗЫКА (MP3)</button>
+            <input type="file" id="music-upload" accept="audio/*" style="display:none" onchange="uploadCustomMusic(event)">
+            <button class="huge-btn" style="background:#333; color:#fff; box-shadow:none;" onclick="stopMusic()">🔇 ВЫКЛЮЧИТЬ МУЗЫКУ</button>
+
+            <h3 style="color:var(--neon-blue); border-bottom: 1px solid #333; padding-bottom: 5px; margin-top: 20px; margin-bottom: 15px;">🎨 БАЗОВЫЕ СКИНЫ</h3>
+            <div class="bg-grid" style="grid-template-columns: repeat(4, 1fr);"><div class="bg-card" style="background:linear-gradient(135deg, #00d2ff, #3a7bd5)" onclick="applySkin('default')">Синий</div><div class="bg-card" style="background:linear-gradient(135deg, #fbc531, #e1b12c)" onclick="applySkin('gold')">Золото</div><div class="bg-card" style="background:linear-gradient(135deg, #ff416c, #ff4b2b)" onclick="applySkin('ruby')">Рубин</div><div class="bg-card" style="background:linear-gradient(135deg, #2ecc71, #27ae60)" onclick="applySkin('emerald')">Изумруд</div></div>
+            <button class="huge-btn" style="background:#555; color:#fff;" onclick="document.getElementById('skin-upload').click()">📷 СВОЕ ФОТО НА КНОПКУ</button><input type="file" id="skin-upload" accept="image/*" style="display:none" onchange="uploadCustomSkin(event)">
+
+            <h3 style="color:var(--neon-blue); border-bottom: 1px solid #333; padding-bottom: 5px; margin-top: 20px; margin-bottom: 15px;">💾 ДАННЫЕ И СОХРАНЕНИЯ</h3>
+            <p style="color:var(--money-green); font-size:0.85em; margin-bottom:10px; font-weight:bold;">✓ Автосохранение в браузер: каждые 2 сек.</p>
+            <p style="color:var(--crystal-cyan); font-size:0.85em; margin-bottom:10px; font-weight:bold;">✓ Автосохранение в облако: каждые 10 сек.</p>
+            
+            <button class="huge-btn" style="background:var(--neon-blue); box-shadow: 0 6px 0 #0097a7;" onclick="forceSaveBtn()">💾 ПРИНУДИТЕЛЬНО В ОБЛАКО</button>
+            <div style="display:flex; gap:10px; margin-top:10px;"><button class="huge-btn" style="flex:1; padding:15px; background:#444; color:#fff; box-shadow:none; font-size:1em;" onclick="exportSave()">ЭКСПОРТ</button><button class="huge-btn" style="flex:1; padding:15px; background:#444; color:#fff; box-shadow:none; font-size:1em;" onclick="importSave()">ИМПОРТ</button></div>
+            <button class="huge-btn" style="background:var(--danger-red); margin-top:30px; box-shadow: 0 6px 0 #c0392b;" onclick="hardReset()">🚨 УДАЛИТЬ ВЕСЬ ПРОГРЕСС</button>
+        </div>
+    </div>
+
+    <div id="prestige-modal" class="modal">
+        <div class="modal-header"><h2>Врата Пустоты</h2><span class="close-btn" onclick="closeAll()">×</span></div>
+        <div class="modal-content" style="text-align:center; display:flex; flex-direction:column; align-items:center;">
+            <div style="width:140px; height:140px; border-radius:50%; background:radial-gradient(circle, var(--rebirth-purple) 0%, transparent 80%); margin:20px 0; border:3px solid var(--rebirth-purple); display:flex; align-items:center; justify-content:center; color:#fff; font-size:3.5em; box-shadow: 0 0 30px rgba(155,89,182,0.5);">🌌</div>
+            <h3 style="color:#fff; font-size:2em; margin-bottom:10px;">СБРОС ПРОГРЕССА</h3>
+            <p style="color:#ccc; line-height:1.5; max-width:90%; margin-bottom:20px;">Ваши здания и деньги исчезнут, но вы получите Кристаллы и вечный множитель <b style="color:var(--money-green);">+50% к доходу</b>.</p>
+            <div style="background:rgba(0, 229, 255, 0.1); padding:20px; border-radius:20px; border:2px solid var(--crystal-cyan); width:100%; margin-bottom:20px;"><span style="color:#fff; font-size:0.9em; font-weight:bold;">НАГРАДА ЗА 1 УРОВЕНЬ:</span><br><b style="color:var(--crystal-cyan); font-size:2.5em;">+<span id="rb-reward-info">1</span> 💎</b></div>
+            
+            <button id="rb-x1" class="huge-btn" style="background:var(--rebirth-purple); box-shadow: 0 6px 0 #7a0e2a;" onclick="prestige(1)">ОБЫЧНЫЙ ПРЕСТИЖ</button>
+            <button id="btn-mass-prestige" class="huge-btn" style="background:linear-gradient(90deg, var(--rebirth-purple), var(--neon-blue)); box-shadow: 0 6px 0 #0097a7;" onclick="doMassPrestige()">МАССОВЫЙ ПРЕСТИЖ</button>
+            <p id="mass-price-hint" style="color:#888; font-size:0.85em; margin-top:10px;">Прокачайте 'Сжатие Реальности' в артефактах.</p>
+        </div>
+    </div>
+    
+    <div id="profile-modal" class="modal">
+        <div class="modal-header"><h2>Личное Дело</h2><span class="close-btn" onclick="closeAll()">×</span></div>
+        <div class="modal-content" style="text-align:center;">
+            <img id="p-avatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" style="width:120px; height:120px; border-radius:50%; border:4px solid var(--neon-blue); margin:0 auto 15px; object-fit:cover;">
+            <br>
+            <button class="huge-btn" style="background:#333; color:#fff; font-size:0.9em; padding:12px; margin-bottom:15px; width:70%; box-shadow:none;" onclick="document.getElementById('avatar-upload').click()">📷 ЗАГРУЗИТЬ АВАТАР</button>
+            <input type="file" id="avatar-upload" accept="image/*" style="display:none" onchange="uploadCustomAvatar(event)">
+
+            <h2 id="p-username" style="color:var(--text-main); margin:0; font-size:2em; text-transform:uppercase;">...</h2>
+            <div id="p-stats" style="text-align:left; background:rgba(0,0,0,0.5); padding:20px; border-radius:20px; border:1px solid #333; line-height:2; margin-top:20px;"></div>
+            <button class="huge-btn" style="margin-top:30px; background:var(--danger-red); box-shadow: 0 6px 0 #c0392b;" onclick="logout()">🚪 СМЕНИТЬ АККАУНТ</button>
+        </div>
+    </div>
+
+    <div id="offline-modal" class="modal">
+        <div class="modal-header"><h2 style="color:var(--money-green);">Возвращение Босса</h2><span class="close-btn" onclick="closeAll()">×</span></div>
+        <div class="modal-content" style="text-align:center;">
+            <div style="font-size:4em; margin:10px 0;">💼</div>
+            <h3 style="color:#fff; font-size:1.5em; margin-bottom:10px;">Пока вас не было...</h3>
+            <p style="color:#aaa; margin-bottom:20px;">Ваша империя работала <b id="offline-time" style="color:var(--neon-blue);">0</b> без вас!</p>
+            <div style="background:rgba(46, 204, 113, 0.1); border:2px solid var(--money-green); padding:20px; border-radius:15px;">
+                <span style="color:#ccc; font-weight:bold; font-size:0.9em;">АФК ДОХОД:</span><br>
+                <b id="offline-earned" style="color:var(--money-green); font-size:2em; font-family:'Consolas', monospace;">0</b>
+            </div>
+            <p style="color:#888; font-size:0.85em; margin-top:15px;">Чтобы увеличить пассивный заработок, прокачивайте артефакты на АФК в Алмазном Зале!</p>
+            <button class="huge-btn" style="margin-top:25px;" onclick="closeAll()">💰 ЗАБРАТЬ ДЕНЬГИ</button>
+        </div>
+    </div>
+
+    <script>
+        // 🔥 ФИКС ОБНОВЛЕНИЯ ЭКРАНА (Анти-Pull-to-Refresh)
+        document.addEventListener('touchstart', function(e) {
+            let el = e.target.closest('.modal-content');
+            if (!el) return;
+            
+            let top = el.scrollTop;
+            let totalScroll = el.scrollHeight;
+            let currentScroll = top + el.offsetHeight;
+            
+            if (top === 0) { el.scrollTop = 1; } 
+            else if (currentScroll >= totalScroll) { el.scrollTop = top - 1; }
+        }, {passive: true});
+
+        document.addEventListener('touchmove', function(e) {
+            if (!e.target.closest('.modal-content') && !e.target.closest('.nav-bar')) { e.preventDefault(); }
+        }, {passive: false});
+
+
+        const FIREBASE_URL = "https://lolololowka14-default-rtdb.europe-west1.firebasedatabase.app";
+        const BASE_RB_COST = 250000;
+
+        let scoreVal = 0, crystalsVal = 0, rbLevel = 0, tcEarned = 0, tcClicks = 0;
+        let playTime = 0; 
+        let bLevels = Array(150).fill(0), pLevels = Array(30).fill(0), aClaimed = Array(100).fill(false);
+        let playerName = '', isLoggedIn = false, isPlayerVip = false;
+
+        let autoClickerEnabled = localStorage.getItem('vipAutoClicker') !== 'false';
+        let autoClickerVisuals = localStorage.getItem('vipAutoClickerVis') !== 'false';
+
+        let cachedCps = 0;
+        let cachedClick = 1;
+
+        function formatNum(num) {
+            if (num < 1000) return (num % 1 !== 0) ? parseFloat(num.toFixed(1)).toString() : Math.floor(num).toString();
+            const s = ["", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc", "Ud", "Dd", "Td", "Qad", "Qid"];
+            const i = Math.floor(Math.log10(num) / 3);
+            if (i >= s.length) return num.toExponential(2);
+            return parseFloat((num / Math.pow(10, i * 3)).toFixed(1)) + s[i];
+        }
+
+        function formatTime(s) {
+            let d = Math.floor(s / 86400); let h = Math.floor((s % 86400) / 3600); let m = Math.floor((s % 3600) / 60); let sec = Math.floor(s % 60);
+            if (d > 0) return `${d}д ${h}ч ${m}м`; if (h > 0) return `${h}ч ${m}м ${sec}с`; if (m > 0) return `${m}м ${sec}с`; return `${sec}с`;
+        }
+
+        const allBuildingNames = [
+            "Сильные пальцы", "Уличный ларек", "Авто-кликер", "Склад ресурсов", "Караван торговцев",
+            "Морской порт", "Ж/Д Магистраль", "Мировой Банк", "Кибер-Биржа", "Орбитальный Завод",
+            "Лунная Шахта", "Марсианская Колония", "Звездная Кузница", "Квантовый Синтезатор", "Сфера Дайсона",
+            "Матрица Темной Материи", "Галактический Коллайдер", "Исказитель Гравитации", "Нейтринный Бур", "Двигатель Измерений",
+            "Генератор Черных Дыр", "Мультивселенский Банк", "Ось Времени", "Ядро Сингулярности", "Звездный Пожиратель",
+            "Око Творца", "Абсолютный Монолит", "Генератор Реальности", "Космический Левиафан", "Астральный Нексус",
+            "Энергия Пустоты", "Квантовый Архитектор", "Фабрика Клонов", "Синдикат Галактик", "Торговый Флот Империи",
+            "Звездный Портал", "Коллектор Сверхновых", "Очиститель Туманностей", "Эфирный Экстрактор", "Магнитный Пульсар",
+            "Хранилище Вечности", "Дворец Анимуса", "Башня Бесконечности", "Орбита Элизиума", "Проект 'Авалон'",
+            "Матрица Судьбы", "Синтезатор Душ", "Колодец Антиматерии", "Галактический Сенат", "Гармонизатор Хаоса",
+            "Кузница Миров", "Кристальный Резонатор", "Колыбель Звезд", "Трансмутатор Материи", "Сеть Телепортов",
+            "Империя ИИ", "Квантовый Разум", "Кодекс Вселенной", "Океан Плазмы", "Сфера Сознания",
+            "Центр Управления Временем", "Архив Галактики", "Венец Творения", "Генератор Парадоксов", "Машина Желаний",
+            "Фабрика Грёз", "Осколок Истины", "Колодец Вечности", "Синтезатор Мультивселенных", "Ось Мироздания",
+            "Пространственный Каркас", "Матрица Богов", "Звездный Оракул", "Пульс Вселенной", "Древо Жизни",
+            "Источник Творения", "Механизм Бесконечности", "Храм Пустоты", "Ткацкий Станок Реальности", "Эхо Большого Взрыва",
+            "Генератор Аномалий", "Квантовая Аномалия", "Колыбель Богов", "Сингулярный Реактор", "Фабрика Измерений",
+            "Врата Омниверса", "Конструктор Судеб", "Эссенция Творца", "Абсолютный Ноль", "Сфера Бесконечности",
+            "Архитектор Пустоты", "Сердце Омниверса", "Конец Времен", "Начало Всего", "Машина Перезапуска",
+            "Творец Реальностей", "Абсолютная Энергия", "Голос Вселенной", "Квантовый Бог", "ULTIMATE TYCOON",
+            "Астральная Биржа", "Квантовый Мост", "Фабрика Иллюзий", "Механизм Забвения", "Осколок Сингулярности", 
+            "Пожиратель Измерений", "Эхо Пустоты", "Кузня Парадоксов", "Лабиринт Времени", "Нейронная Сеть Богов",
+            "Исходный Код", "Архитектура Снов", "Сердце Бездны", "Венец Хаоса", "Монолит Истины", 
+            "Хранитель Тайн", "Планета-Механизм", "Сфера Абсолюта", "Машина Трансцендентности", "Колыбель Вечности",
+            "Галактический Сейф", "Звездный Конвейер", "Репликатор Материи", "Струнный Осциллятор", "Энергия Квазара", 
+            "Нексус Омниверса", "Контроллер Судьбы", "Исказитель Пространства", "Проектор Реальности", "Алтарь Бесконечности",
+            "Кристалл Всевластия", "Маяк Измерений", "Дыхание Космоса", "Пустотный Экстрактор", "Дворец Создателя", 
+            "Матрица Перерождения", "Источник Эфира", "Коллапс Времени", "Точка Невозврата", "Фантомный Сервер",
+            "База Данных Вселенной", "Облако Душ", "Архиватор Реальности", "Квантовый Хостинг", "Истинный Творец", 
+            "Терминал Создателя", "Консоль Разработчика", "Финальная Строка Кода", "АБСОЛЮТНЫЙ ПРЕДЕЛ", "ВЛАСТЕЛИН ИГРЫ"
+        ];
+
+        const buildings = [];
+        for(let i = 0; i < 150; i++) {
+            if(i === 0) buildings.push({ name: allBuildingNames[i], base: 15, eff: 1, type: 'cpc', req: 0 });
+            else if(i === 1) buildings.push({ name: allBuildingNames[i], base: 100, eff: 2, type: 'cps', req: 0 });
+            else if(i === 2) buildings.push({ name: allBuildingNames[i], base: 500, eff: 5, type: 'cpc', req: 0 });
+            else if(i === 3) buildings.push({ name: allBuildingNames[i], base: 1200, eff: 15, type: 'cps', req: 1 });
+            else if(i === 4) buildings.push({ name: allBuildingNames[i], base: 6000, eff: 60, type: 'cps', req: 2 });
+            else if(i === 5) buildings.push({ name: allBuildingNames[i], base: 40000, eff: 350, type: 'cps', req: 3 });
+            else if(i === 6) buildings.push({ name: allBuildingNames[i], base: 250000, eff: 2000, type: 'cps', req: 5 });
+            else if(i === 7) buildings.push({ name: allBuildingNames[i], base: 1500000, eff: 12000, type: 'cps', req: 7 });
+            else if(i === 8) buildings.push({ name: allBuildingNames[i], base: 10000000, eff: 80000, type: 'cps', req: 10 });
+            else if(i === 9) buildings.push({ name: allBuildingNames[i], base: 75000000, eff: 450000, type: 'cps', req: 14 });
+            else {
+                buildings.push({
+                    name: allBuildingNames[i],
+                    base: buildings[i-1].base * 7,
+                    eff: buildings[i-1].eff * 5,
+                    type: i % 5 === 0 ? 'cpc' : 'cps',
+                    req: 15 + Math.floor(i*1.5)
+                });
+            }
+        }
+
+        const artifactData = [
+            { name: 'Печать Множителя', desc: 'Глобальный доход +50%', base: 1, max: 20 },
+            { name: 'Золотое Кольцо', desc: 'Сила клика +50%', base: 1, max: 25 },
+            { name: 'Мульти-Сброс', desc: '+1 💎 к базовой награде', base: 3, max: 15 },
+            { name: 'Карта Купца', desc: 'Пассивный доход +20%', base: 2, max: 30 },
+            { name: 'Кости Удачи', desc: 'Крит шанс +2%', base: 2, max: 20 },
+            { name: 'Сила Крита', desc: 'Крит урон +x1', base: 3, max: 30 },
+            { name: 'Сжатие Реальности', desc: 'Масс-сброс', base: 10, max: 100 },
+            { name: 'Оффлайн Склад', desc: 'АФК доход +30%', base: 5, max: 10 },
+            { name: 'Турбо-двигатель', desc: 'Скорость монет +20%', base: 10, max: 10 },
+            { name: 'Колесо Фортуны', desc: 'Шанс 1% на x10 прибыли', base: 15, max: 5 },
+            { name: 'Алмазный Дождь', desc: 'Клик +1% от CPS', base: 25, max: 20 },
+            { name: 'Звездный Контракт', desc: 'Бонус уровня престижа x2', base: 50, max: 5 },
+            { name: 'Мудрость Веков', desc: 'Здания дорожают медленнее', base: 100, max: 5 },
+            { name: 'Эфирный Поток', desc: 'Сила клика x5', base: 250, max: 10 },
+            { name: 'Абсолютный Код', desc: 'Все множители x2', base: 500, max: 10 },
+            { name: 'Ядро Пустоты', desc: 'Пассивный доход x5', base: 1000, max: 10 },
+            { name: 'Глаз Бога', desc: 'Шанс крита +25%', base: 250, max: 3 }, // 🔥 ТУТ ЦЕНА ИСПРАВЛЕНА НА 250
+            { name: 'Хронос-печать', desc: 'АФК доход x2', base: 5000, max: 3 },
+            { name: 'Сфера Искажения', desc: 'Крит наносит x10 прибыли', base: 1500, max: 3 },
+            { name: 'Сингулярность', desc: 'УДАЛЕНО', base: 9999999, max: 0, hidden: true }, 
+            { name: 'Генератор Материи', desc: 'Сила клика x10', base: 500, max: 5 }, // 🔥 ТУТ МНОЖИТЕЛЬ ИСПРАВЛЕН НА x10
+            { name: 'Песочные Часы', desc: 'Снижает цены зданий на 10%', base: 800, max: 5 },
+            { name: 'Омни-реактор', desc: 'Вечный множитель x5', base: 1500, max: 5 },
+            { name: 'Матрица Удачи', desc: 'Шанс крита +25%', base: 2500, max: 2 },
+            { name: 'Оффлайн Коллапс', desc: 'АФК доход x5', base: 4000, max: 3 },
+            { name: 'Дыхание Дракона', desc: 'УДАЛЕНО', base: 9999999, max: 0, hidden: true }
+        ];
+
+        const achieves = [
+            { title: 'Разминка', desc: 'Сделай 100 кликов', icon: '🖱️', goal: 100, type: 'clicks', reward: 1 },
+            { title: 'Разогрев', desc: 'Сделай 1,000 кликов', icon: '🔥', goal: 1000, type: 'clicks', reward: 2 },
+            { title: 'Разгон', desc: 'Сделай 5,000 кликов', icon: '🚀', goal: 5000, type: 'clicks', reward: 3 }, 
+            { title: 'Пулемет', desc: 'Сделай 10,000 кликов', icon: '🔫', goal: 10000, type: 'clicks', reward: 5 },
+            { title: 'Кибер-спортсмен', desc: 'Сделай 100,000 кликов', icon: '🎮', goal: 100000, type: 'clicks', reward: 15 },
+            { title: 'Сломанная мышка', desc: 'Сделай 1,000,000 кликов', icon: '💥', goal: 1000000, type: 'clicks', reward: 50 },
+            { title: 'Разрушитель вселенных', desc: 'Сделай 10,000,000 кликов', icon: '🌌', goal: 10000000, type: 'clicks', reward: 150 },
+            { title: 'Первые деньги', desc: 'Собери 10,000 капитала', icon: '💵', goal: 10000, type: 'earned', reward: 1 },
+            { title: 'Стартапер', desc: 'Собери 50,000 капитала', icon: '💡', goal: 50000, type: 'earned', reward: 2 }, 
+            { title: 'Успешный бизнес', desc: 'Собери 1,000,000 капитала', icon: '💼', goal: 1000000, type: 'earned', reward: 3 },
+            { title: 'Олигарх', desc: 'Собери 1 Миллиард капитала', icon: '💰', goal: 1000000000, type: 'earned', reward: 10 },
+            { title: 'Магнат Земли', desc: 'Собери 1 Триллион капитала', icon: '🌍', goal: 1000000000000, type: 'earned', reward: 25 },
+            { title: 'Галактический банк', desc: 'Собери 1 Квадриллион капитала', icon: '🏦', goal: 1000000000000000, type: 'earned', reward: 75 },
+            { title: 'Хозяин Мультивселенной', desc: 'Собери 1 Квинтиллион капитала', icon: '👑', goal: 1000000000000000000, type: 'earned', reward: 200 },
+            { title: 'Пассивный ручеек', desc: 'Достигни 500 Дохода/с', icon: '💧', goal: 500, type: 'cps', reward: 2 },
+            { title: 'Денежная река', desc: 'Достигни 50,000 Дохода/с', icon: '🌊', goal: 50000, type: 'cps', reward: 5 },
+            { title: 'Финансовый водопад', desc: 'Достигни 5,000,000 Дохода/с', icon: '📈', goal: 5000000, type: 'cps', reward: 15 },
+            { title: 'Печатный станок', desc: 'Достигни 500 Млн Дохода/с', icon: '🖨️', goal: 500000000, type: 'cps', reward: 40 },
+            { title: 'Квантовая экономика', desc: 'Достигни 50 Млрд Дохода/с', icon: '⚛️', goal: 50000000000, type: 'cps', reward: 100 },
+            { title: 'Малый бизнес', desc: 'Купи 25 зданий в сумме', icon: '🏪', goal: 25, type: 'buildings', reward: 2 },
+            { title: 'Застройщик', desc: 'Купи 100 зданий в сумме', icon: '🏗️', goal: 100, type: 'buildings', reward: 5 },
+            { title: 'Шопоголик', desc: 'Купи 150 зданий в сумме', icon: '🛍️', goal: 150, type: 'buildings', reward: 8 }, 
+            { title: 'Мегаполис', desc: 'Купи 500 зданий в сумме', icon: '🏙️', goal: 500, type: 'buildings', reward: 15 },
+            { title: 'Планета-завод', desc: 'Купи 2,000 зданий в сумме', icon: '🏭', goal: 2000, type: 'buildings', reward: 50 },
+            { title: 'Сфера Дайсона', desc: 'Купи 5,000 зданий в сумме', icon: '☀️', goal: 5000, type: 'buildings', reward: 120 },
+            { title: 'Сила древних', desc: 'Собери 5 уровней артефактов', icon: '🏺', goal: 5, type: 'artifacts', reward: 3 },
+            { title: 'Любитель магии', desc: 'Собери 10 уровней артефактов', icon: '✨', goal: 10, type: 'artifacts', reward: 5 }, 
+            { title: 'Археолог', desc: 'Собери 25 уровней артефактов', icon: '📜', goal: 25, type: 'artifacts', reward: 10 },
+            { title: 'Хранитель реликвий', desc: 'Собери 75 уровней артефактов', icon: '💎', goal: 75, type: 'artifacts', reward: 30 },
+            { title: 'Абсолютное знание', desc: 'Собери 150 уровней артефактов', icon: '👁️', goal: 150, type: 'artifacts', reward: 100 },
+            { title: 'Шаг в неизвестность', desc: 'Достигни 1 уровня престижа', icon: '🌀', goal: 1, type: 'rebirths', reward: 5 },
+            { title: 'Реинкарнация', desc: 'Достигни 5 уровня престижа', icon: '🦋', goal: 5, type: 'rebirths', reward: 10 }, 
+            { title: 'Петля времени', desc: 'Достигни 10 уровня престижа', icon: '⏳', goal: 10, type: 'rebirths', reward: 20 },
+            { title: 'Повелитель измерений', desc: 'Достигни 50 уровня престижа', icon: '🛸', goal: 50, type: 'rebirths', reward: 75 },
+            { title: 'Архитектор реальности', desc: 'Достигни 250 уровня престижа', icon: '🌌', goal: 250, type: 'rebirths', reward: 250 },
+            { title: 'Абсолютный кликер', desc: 'Сделай 25,000,000 кликов', icon: '⚡', goal: 25000000, type: 'clicks', reward: 250 },
+            { title: 'Секстиллионер', desc: 'Собери 1 Секстиллион капитала', icon: '💸', goal: 1e21, type: 'earned', reward: 500 },
+            { title: 'Септиллионер', desc: 'Собери 1 Септиллион капитала', icon: '🌠', goal: 1e24, type: 'earned', reward: 1000 },
+            { title: 'Экономика Богов', desc: 'Достигни 1 Трлн Дохода/с', icon: '🪐', goal: 1e12, type: 'cps', reward: 300 },
+            { title: 'Властелин Галактики', desc: 'Достигни 1 Квадрлн Дохода/с', icon: '🌟', goal: 1e15, type: 'cps', reward: 800 },
+            { title: 'Межзвездная Империя', desc: 'Купи 10,000 зданий', icon: '🚀', goal: 10000, type: 'buildings', reward: 500 },
+            { title: 'Коллекционер Богов', desc: 'Собери 250 уровней артефактов', icon: '🔮', goal: 250, type: 'artifacts', reward: 1000 },
+            { title: 'Взломщик Времени', desc: 'Достигни 500 уровня престижа', icon: '⌛', goal: 500, type: 'rebirths', reward: 1500 },
+            { title: 'Создатель Омниверса', desc: 'Достигни 1,000 уровня престижа', icon: '👑', goal: 1000, type: 'rebirths', reward: 5000 },
+            { title: 'Быстрые пальцы', desc: 'Сделай 50,000 кликов', icon: '🖐️', goal: 50000, type: 'clicks', reward: 10 },
+            { title: 'Маэстро мыши', desc: 'Сделай 500,000 кликов', icon: '🖱️', goal: 500000, type: 'clicks', reward: 25 },
+            { title: 'Кликающий монстр', desc: 'Сделай 5,000,000 кликов', icon: '👹', goal: 5000000, type: 'clicks', reward: 75 },
+            { title: 'Крупный инвестор', desc: 'Собери 100 Миллионов капитала', icon: '💼', goal: 1e8, type: 'earned', reward: 5 },
+            { title: 'Мировой монополист', desc: 'Собери 100 Миллиардов капитала', icon: '🌎', goal: 1e11, type: 'earned', reward: 15 },
+            { title: 'Звездный магнат', desc: 'Собери 100 Триллионов капитала', icon: '🌟', goal: 1e14, type: 'earned', reward: 40 },
+            { title: 'Золотая жила', desc: 'Достигни 50 Млн Дохода/с', icon: '💰', goal: 50000000, type: 'cps', reward: 10 },
+            { title: 'Печатный завод', desc: 'Достигни 5 Млрд Дохода/с', icon: '🏭', goal: 5000000000, type: 'cps', reward: 30 },
+            { title: 'Прораб', desc: 'Купи 1,000 зданий в сумме', icon: '🏗️', goal: 1000, type: 'buildings', reward: 20 },
+            { title: 'Властелин городов', desc: 'Купи 3,500 зданий в сумме', icon: '🏙️', goal: 3500, type: 'buildings', reward: 80 },
+            { title: 'Император планет', desc: 'Купи 7,500 зданий в сумме', icon: '🪐', goal: 7500, type: 'buildings', reward: 150 },
+            { title: 'Искатель древностей', desc: 'Собери 50 уровней артефактов', icon: '🏺', goal: 50, type: 'artifacts', reward: 15 },
+            { title: 'Магистр артефактов', desc: 'Собери 100 уровней артефактов', icon: '📜', goal: 100, type: 'artifacts', reward: 50 },
+            { title: 'Хранитель Омниверса', desc: 'Собери 200 уровней артефактов', icon: '🧿', goal: 200, type: 'artifacts', reward: 150 },
+            { title: 'Странник измерений', desc: 'Достигни 100 уровня престижа', icon: '🌀', goal: 100, type: 'rebirths', reward: 40 }
+        ];
+
+        function getAchieveCurrent(type) {
+            if (type === 'clicks') return tcClicks;
+            if (type === 'earned') return tcEarned;
+            if (type === 'rebirths') return rbLevel;
+            if (type === 'buildings') return bLevels.reduce((a, b) => a + (Number(b) || 0), 0);
+            if (type === 'artifacts') return pLevels.reduce((a, b) => a + (Number(b) || 0), 0);
+            if (type === 'cps') return getBaseCps();
+            return 0;
+        }
+
+        const getBatchSize = () => 1 + (Number(pLevels[6]) || 0);
+        
+        const calcGlobalMult = () => {
+            let rbBonus = rbLevel * 0.5 * (1 + (Number(pLevels[11]) || 0));
+            let p0 = (Number(pLevels[0]) || 0) * 0.5;
+            let base = 1 + rbBonus + p0;
+            return base * Math.pow(2, (Number(pLevels[14]) || 0)) * Math.pow(5, (Number(pLevels[22]) || 0));
+        };
+        
+        const getBaseCps = () => {
+            let b=0; buildings.forEach((x,i)=>{if(x.type==='cps') b+=x.eff*(Number(bLevels[i])||0)}); 
+            let p3 = 1 + (Number(pLevels[3]) || 0) * 0.2;
+            let p8 = 1 + (Number(pLevels[8]) || 0) * 0.2;
+            let p15 = Math.pow(5, (Number(pLevels[15]) || 0));
+            return b * calcGlobalMult() * p3 * p8 * p15; 
+        };
+
+        const getCpsVal = () => { 
+            return isPlayerVip ? getBaseCps() * 2 : getBaseCps(); 
+        };
+
+        const getClickVal = () => { 
+            let b=1; buildings.forEach((x,i)=>{if(x.type==='cpc') b+=x.eff*(Number(bLevels[i])||0)}); 
+            let p1 = 1 + (Number(pLevels[1]) || 0) * 0.5;
+            let p13 = Math.pow(5, (Number(pLevels[13]) || 0));
+            let syn = (Number(pLevels[10]) || 0) > 0 ? (getBaseCps() * ((Number(pLevels[10]) || 0) * 0.01)) : 0;
+            let p20 = Math.pow(10, (Number(pLevels[20]) || 0));
+            let val = ((b * calcGlobalMult() * p1 * p13) + syn) * p20; 
+            return isPlayerVip ? val * 2 : val; 
+        };
+
+        window.toggleAutoClicker = function() {
+            autoClickerEnabled = !autoClickerEnabled;
+            localStorage.setItem('vipAutoClicker', autoClickerEnabled);
+            updateVipTogglesUI();
+        };
+
+        window.toggleAutoClickerVisuals = function() {
+            autoClickerVisuals = !autoClickerVisuals;
+            localStorage.setItem('vipAutoClickerVis', autoClickerVisuals);
+            updateVipTogglesUI();
+        };
+
+        function updateVipTogglesUI() {
+            let btnAc = document.getElementById('btn-toggle-ac');
+            let btnVis = document.getElementById('btn-toggle-ac-vis');
+            if(btnAc) {
+                btnAc.innerText = autoClickerEnabled ? '🤖 АВТОКЛИК: ВКЛ' : '🤖 АВТОКЛИК: ВЫКЛ';
+                btnAc.style.background = autoClickerEnabled ? 'var(--money-green)' : '#555';
+                btnAc.style.boxShadow = autoClickerEnabled ? '0 6px 0 #1e9a50' : 'none';
+            }
+            if(btnVis) {
+                btnVis.innerText = autoClickerVisuals ? '✨ ЭФФЕКТЫ: ВКЛ' : '✨ ЭФФЕКТЫ: ВЫКЛ';
+                btnVis.style.background = autoClickerVisuals ? 'var(--neon-blue)' : '#555';
+                btnVis.style.boxShadow = autoClickerVisuals ? '0 6px 0 #0097a7' : 'none';
+            }
+        }
+
+        document.getElementById('click-target').addEventListener('mousedown', tap);
+        document.getElementById('click-target').addEventListener('touchstart', tap, {passive:false});
+
+        function tap(e) {
+            if(e && e.cancelable) e.preventDefault();
+            let isAuto = !e || (e.type !== 'mousedown' && e.type !== 'touchstart');
+
+            let val = getClickVal();
+            let crit = 0.05 + (Number(pLevels[4]) || 0) * 0.02 + (Number(pLevels[16]) || 0) * 0.25 + (Number(pLevels[23]) || 0) * 0.25;
+            let isCrit = Math.random() < crit;
+            if(isCrit) val *= (5 + (Number(pLevels[5]) || 0)) * ((Number(pLevels[18]) || 0) > 0 ? 10 : 1);
+            if(Math.random() < ((Number(pLevels[9]) || 0) * 0.01)) val *= 10;
+
+            scoreVal += val; tcEarned += val; tcClicks++;
+            
+            if (isAuto && !autoClickerVisuals) {
+                updateFast();
+                return;
+            }
+
+            let x=0, y=0;
+            let r=document.getElementById('click-target').getBoundingClientRect();
+            
+            if(e && e.clientX){ x=e.clientX; y=e.clientY; } 
+            else if(e && e.touches && e.touches.length > 0){ x=e.touches[0].clientX; y=e.touches[0].clientY; }
+            else { 
+                x = r.left + r.width/2 + (Math.random()*80-40); 
+                y = r.top + r.height/2 + (Math.random()*80-40); 
+                let btn = document.getElementById('click-target');
+                btn.style.transform = 'scale(0.92) translateY(15px)';
+                setTimeout(() => btn.style.transform = '', 50);
+            }
+            
+            let d = document.createElement('div'); d.className = 'floating-text'; d.style.left = x+'px'; d.style.top = (y-30)+'px';
+            d.innerText = '+'+formatNum(val); if(isCrit) d.style.color = '#ff4757';
+            document.body.appendChild(d); setTimeout(()=>d.remove(), 800);
+            
+            let p = document.createElement('div'); p.className = 'particle'; p.style.left=x+'px'; p.style.top=y+'px';
+            p.style.setProperty('--tx', (Math.cos(Math.random()*Math.PI*2)*(Math.random()*60+40))+'px'); 
+            p.style.setProperty('--ty', (Math.sin(Math.random()*Math.PI*2)*(Math.random()*60+40))+'px');
+            document.body.appendChild(p); setTimeout(()=>p.remove(), 600);
+            
+            updateFast();
+        }
+
+        function prestige(amount) {
+            let bp = Math.floor(BASE_RB_COST * Math.pow(1.5, rbLevel));
+            let finalCost = bp * amount; 
+            if(scoreVal >= finalCost) {
+                crystalsVal += (1 + (Number(pLevels[2])||0)) * amount;
+                rbLevel += amount; scoreVal = 0; bLevels.fill(0);
+                updateAll(); closeAll(); saveGame(true);
+            }
+        }
+
+        window.doMassPrestige = function() {
+            let batch = getBatchSize();
+            if (batch <= 1) return;
+            prestige(batch);
+        }
+
+        function initLists() {
+            document.getElementById('shop-items').innerHTML = buildings.map((b, i) => `<div class="card" id="shop-card-${i}"><div class="card-info"><b id="shop-title-${i}">${b.name} [0]</b><i>+${formatNum(b.eff)}${b.type==='cps'?'/с':'/клик'}</i></div><button id="shop-btn-${i}" class="upg-btn" onclick="window.buyB(${i})"></button></div>`).join('');
+            document.getElementById('crystal-items').innerHTML = artifactData.map((p, i) => p.hidden ? '' : `<div class="card"><div class="card-info"><b id="crys-title-${i}" style="color:var(--crystal-cyan)">${p.name} [0/${p.max}]</b><span>${p.desc}</span></div><button id="crys-btn-${i}" class="upg-btn" onclick="window.buyP(${i})"></button></div>`).join('');
+            document.getElementById('achieve-items').innerHTML = achieves.map((a, i) => `<div class="card" id="ach-card-${i}"><div class="card-info"><b id="ach-title-${i}">${a.icon} ${a.title}</b><span>${a.desc}</span><i id="ach-prog-${i}"></i></div><button id="ach-btn-${i}" class="upg-btn" onclick="window.claimA(${i})"></button></div>`).join('');
+        }
+
+        function syncUI() {
+            if (document.getElementById('shop-modal').classList.contains('open')) {
+                let p12 = Number(pLevels[12]) || 0; 
+                let p21 = Number(pLevels[21]) || 0; 
+                let growth = Math.max(1.05, 1.15 - (p12 * 0.02));
+                
+                for(let i=0; i<buildings.length; i++) {
+                    let btn = document.getElementById('shop-btn-'+i); let card = document.getElementById('shop-card-'+i);
+                    if(btn && card) {
+                        let blvl = Number(bLevels[i]) || 0; 
+                        let baseCost = buildings[i].base * Math.pow(0.90, p21); 
+                        let cost = Math.floor(baseCost * Math.pow(growth, blvl)); 
+                        let lock = rbLevel < buildings[i].req; let canAfford = scoreVal >= cost;
+                        
+                        btn.disabled = !canAfford || lock; btn.innerText = lock ? `Ур. ${buildings[i].req}` : `${formatNum(cost)}`; btn.className = (canAfford && !lock) ? 'upg-btn can-buy' : 'upg-btn disabled';
+                        document.getElementById('shop-title-'+i).innerText = `${buildings[i].name} [${blvl}]`; card.style.opacity = lock ? '0.4' : '1'; card.style.filter = lock ? 'grayscale(1)' : 'none';
+                    }
+                }
+            }
+            if (document.getElementById('crystal-modal').classList.contains('open')) {
+                for(let i=0; i<artifactData.length; i++) {
+                    if (artifactData[i].hidden) continue;
+                    let btn = document.getElementById('crys-btn-'+i);
+                    if(btn) {
+                        let plvl = Number(pLevels[i]) || 0; let cost = Math.floor(artifactData[i].base * Math.pow(1.3, plvl)); let canAfford = crystalsVal >= cost, maxed = plvl >= artifactData[i].max;
+                        btn.disabled = !canAfford || maxed; btn.innerText = maxed ? 'МАКС' : `${formatNum(cost)} 💎`; btn.className = maxed ? 'upg-btn claimed-btn' : (canAfford ? 'upg-btn can-buy-crystal' : 'upg-btn disabled');
+                        document.getElementById('crys-title-'+i).innerText = `${artifactData[i].name} [${plvl}/${artifactData[i].max}]`;
+                    }
+                }
+            }
+            if (document.getElementById('achieve-modal').classList.contains('open')) {
+                for(let i=0; i<achieves.length; i++) {
+                    let btn = document.getElementById('ach-btn-'+i);
+                    if(btn) {
+                        let a = achieves[i]; let cur = getAchieveCurrent(a.type); let can = cur >= a.goal;
+                        let prog = document.getElementById('ach-prog-'+i); if(prog) prog.innerText = `${formatNum(cur)} / ${formatNum(a.goal)}`;
+                        let card = document.getElementById('ach-card-'+i); let title = document.getElementById('ach-title-'+i);
+                        if (aClaimed[i]) { btn.disabled = true; btn.innerText = 'ВЗЯТО'; btn.className = 'upg-btn claimed-btn'; if(card) { card.style.opacity='0.4'; } if(title) title.style.color='var(--rebirth-purple)'; } 
+                        else { btn.disabled = !can; btn.innerText = `+${a.reward} 💎`; btn.className = can ? 'upg-btn can-buy-crystal' : 'upg-btn disabled'; }
+                    }
+                }
+            }
+        }
+
+        function updateFast() {
+            document.getElementById('score').innerText = formatNum(scoreVal);
+            
+            let bp = Math.floor(BASE_RB_COST * Math.pow(1.5, rbLevel)); 
+            let batch = getBatchSize(); 
+            let mp = bp * batch; 
+            
+            let rb1 = document.getElementById('rb-x1'); 
+            if(rb1) { 
+                rb1.disabled = scoreVal < bp; 
+                rb1.innerText = `ОБЫЧНЫЙ (${formatNum(bp)})`; 
+            }
+            
+            let rbm = document.getElementById('btn-mass-prestige'); 
+            if(rbm) { 
+                rbm.disabled = scoreVal < mp || batch <= 1; 
+                if (batch <= 1) {
+                    rbm.innerText = `МАССОВЫЙ (НУЖЕН АРТЕФАКТ)`;
+                } else {
+                    rbm.innerText = `МАССОВЫЙ x${batch} (${formatNum(mp)})`;
+                }
+            }
+            syncUI();
+        }
+
+        function updateAll() {
+            document.getElementById('crystals').innerText = formatNum(crystalsVal);
+            document.getElementById('rebirth-level-disp').innerText = rbLevel;
+            document.getElementById('multiplier').innerText = 'x' + formatNum(calcGlobalMult());
+            document.getElementById('income-val').innerText = formatNum(getCpsVal());
+            document.getElementById('click-power').innerText = formatNum(getClickVal());
+            document.getElementById('mini-level').innerText = 'Ур. ' + rbLevel;
+            document.getElementById('crystal-balance-disp').innerText = formatNum(crystalsVal) + ' 💎';
+            document.getElementById('rb-reward-info').innerText = 1 + (Number(pLevels[2])||0);
+            updateFast();
+        }
+
+        window.buyB = function(i) { 
+            let p12 = Number(pLevels[12])||0; 
+            let p21 = Number(pLevels[21])||0;
+            let growth = Math.max(1.05, 1.15-(p12*0.02)); 
+            let baseCost = buildings[i].base * Math.pow(0.90, p21);
+            let cost = Math.floor(baseCost * Math.pow(growth, (Number(bLevels[i])||0))); 
+            
+            if(scoreVal >= cost && rbLevel >= buildings[i].req) { 
+                scoreVal -= cost; bLevels[i] = (Number(bLevels[i])||0) + 1; updateAll(); 
+            } 
+        };
+
+        window.buyP = function(i) { 
+            if (artifactData[i].hidden) return;
+            let cost = Math.floor(artifactData[i].base * Math.pow(1.3, (Number(pLevels[i])||0))); 
+            if(crystalsVal >= cost && (Number(pLevels[i])||0) < artifactData[i].max) { 
+                crystalsVal -= cost; pLevels[i] = (Number(pLevels[i])||0) + 1; updateAll(); saveGame(true); 
+            } 
+        };
+        
+        window.claimA = function(i) { 
+            let cur = getAchieveCurrent(achieves[i].type); 
+            if(!aClaimed[i] && cur >= achieves[i].goal) { 
+                aClaimed[i] = true; crystalsVal += achieves[i].reward; updateAll(); saveGame(true); 
+            } 
+        };
+
+        function renderLeaderboard(type = 'score') {
+            document.getElementById('tab-score').className = type === 'score' ? 'tab-btn active' : 'tab-btn'; 
+            document.getElementById('tab-rebirths').className = type === 'rebirths' ? 'tab-btn active' : 'tab-btn';
+            document.getElementById('tab-time').className = type === 'playTime' ? 'tab-btn active' : 'tab-btn';
+            
+            const list = document.getElementById('leaderboard-items'); list.innerHTML = "Синхронизация...";
+            fetch(`${FIREBASE_URL}/leaderboard.json`).then(r=>r.json()).then(data => {
+                let l = []; for(let k in data) { if(data[k] && data[k].name) l.push(data[k]); } 
+                l.sort((a,b) => (Number(b[type]) || 0) - (Number(a[type]) || 0));
+                
+                let icon = type === 'score' ? ' 💰' : (type === 'rebirths' ? ' 🌌' : '');
+                
+                list.innerHTML = l.slice(0,30).map((p, i) => {
+                    let rClass = ''; let rIcon = `#${i+1}`;
+                    if(i===0) { rClass='rank-1'; rIcon='🥇'; } else if(i===1) { rClass='rank-2'; rIcon='🥈'; } else if(i===2) { rClass='rank-3'; rIcon='🥉'; }
+                    
+                    let displayValue = '';
+                    if (type === 'playTime') {
+                        displayValue = '⏳ ' + formatTime(Number(p[type])||0);
+                    } else {
+                        displayValue = formatNum(Number(p[type])||0) + icon;
+                    }
+
+                    return `<div class="top-player ${rClass}"><div class="top-rank">${rIcon}</div><div class="top-details"><div class="top-name">${p.name}</div><div class="top-score">${displayValue}</div></div></div>`;
+                }).join('');
+            }).catch(()=>list.innerHTML="Блокировка сервером.");
+        }
+
+        function renderProfile() {
+            document.getElementById('p-username').innerText = playerName.toUpperCase(); 
+            document.getElementById('mini-name').innerHTML = playerName.toUpperCase() + (isPlayerVip ? ' 👑' : '');
+            if(isPlayerVip) { document.getElementById('mini-name').style.color = 'var(--vip-gold)'; document.getElementById('mini-name').style.textShadow = '0 0 10px rgba(255,184,0,0.6)'; }
+            document.getElementById('p-stats').innerHTML = `<b style="color:var(--neon-blue)">Кликов:</b> ${formatNum(tcClicks)}<br><b style="color:var(--money-green)">Заработано:</b> ${formatNum(tcEarned)}<br><b style="color:var(--rebirth-purple)">Престижей:</b> ${formatNum(rbLevel)}<br><br><b style="color:var(--lore-gold)">⏳ Время в игре:</b> ${formatTime(playTime)}`;
+        }
+
+        let bgMusic = document.getElementById('game-music');
+        
+        window.uploadCustomAvatar = function(e) { 
+            const f = e.target.files[0]; 
+            if(f) { 
+                const r = new FileReader(); 
+                r.onload = (ev) => { 
+                    try { localStorage.setItem('avatar', ev.target.result); applyAvatar(ev.target.result); } 
+                    catch(err) { alert("Картинка много весит!"); applyAvatar(ev.target.result); } 
+                }; r.readAsDataURL(f); 
+            } 
+        };
+        window.applyAvatar = function(src) {
+            if(src) { document.getElementById('p-avatar').src = src; document.getElementById('mini-avatar').src = src; }
+        };
+
+        window.setBg = function(val) { 
+            document.getElementById('bg-video').style.display = 'none'; document.getElementById('bg-video').pause(); localStorage.removeItem('videoBg');
+            document.getElementById('bg-layer').style.background = val; document.getElementById('bg-layer').style.backgroundImage = '';
+            document.body.className = 'bg-default'; localStorage.setItem('bg', val); localStorage.setItem('playerBgClass', 'default'); 
+        }
+        window.uploadCustomBg = function(e) { 
+            const f = e.target.files[0]; if(!f) return; const r = new FileReader(); 
+            r.onload = (ev) => { 
+                document.getElementById('bg-video').style.display = 'none'; document.getElementById('bg-video').pause(); localStorage.removeItem('videoBg');
+                document.getElementById('bg-layer').style.background = `url(${ev.target.result}) center/cover no-repeat`; document.body.className = 'bg-default'; 
+                try { localStorage.setItem('bg', `url(${ev.target.result}) center/cover no-repeat`); localStorage.setItem('playerBgClass', 'default'); } catch(e){ alert('Слишком большая картинка!'); } 
+            }; r.readAsDataURL(f); 
+        }
+        window.setBgClass = function(cls) {
+            if(!isPlayerVip) { alert("Только для VIP Клуба!"); return; }
+            document.getElementById('bg-video').style.display = 'none'; document.getElementById('bg-video').pause(); localStorage.removeItem('videoBg');
+            document.body.className = 'bg-' + cls; document.getElementById('bg-layer').style.background = 'none'; document.getElementById('bg-layer').style.backgroundImage = 'none';
+            localStorage.setItem('playerBgClass', cls); localStorage.removeItem('bg');
+        }
+
+        window.setVideoBg = function(url, isLocal=false) {
+            document.body.className = 'bg-default'; document.getElementById('bg-layer').style.background = 'none'; document.getElementById('bg-layer').style.backgroundImage = 'none';
+            localStorage.setItem('playerBgClass', 'default'); localStorage.removeItem('bg');
+            const vid = document.getElementById('bg-video'); vid.src = url; vid.style.display = 'block'; vid.play().catch(e=>{});
+            if(!isLocal) { localStorage.setItem('videoBg', url); } else { localStorage.removeItem('videoBg'); }
+        }
+        window.uploadCustomVideo = function(e) {
+            const f = e.target.files[0];
+            if(f) { const blobUrl = URL.createObjectURL(f); setVideoBg(blobUrl, true); alert("🎬 Видео установлено на текущую сессию!"); }
+        }
+
+        window.setMusic = function(url) { bgMusic.src = url; bgMusic.play().catch(e=>{}); localStorage.setItem('mus', url); };
+        window.uploadCustomMusic = function(e) { const f = e.target.files[0]; if(f) { bgMusic.src = URL.createObjectURL(f); bgMusic.play(); localStorage.removeItem('mus'); } };
+        window.stopMusic = function() { bgMusic.pause(); localStorage.removeItem('mus'); };
+
+        window.applySkin = function(id) { 
+            const b = document.getElementById('click-target'); b.className = ''; b.style.cssText = ''; b.innerText = 'TAP!';
+            if(id.startsWith('vip-')) {
+                if(!isPlayerVip) { alert("Это VIP-скин! Приобрести доступ можно у бота в Телеграм."); return; }
+                if(id === 'vip-fire') { b.className = 'skin-inferno-pulse'; b.innerText = '🔥'; }
+                if(id === 'vip-space') { b.className = 'skin-galaxy-vortex'; b.innerText = '🌌'; }
+                if(id === 'vip-matrix') { b.className = 'skin-glitch-void'; b.innerText = 'GLITCH'; }
+                if(id === 'vip-plasma') { b.className = 'skin-plasma'; b.innerText = '🔮'; }
+                if(id === 'vip-toxic') { b.className = 'skin-toxic'; b.innerText = '🧪'; }
+                if(id === 'vip-holo') { b.className = 'skin-holo'; b.innerText = '📟'; }
+                if(id === 'vip-god') { b.className = 'skin-god'; b.innerText = '👁️'; }
+                localStorage.setItem('skin', id); return;
+            }
+            if(id === 'default') { b.style.background = 'linear-gradient(135deg, #00e5ff, #0055ff)'; }
+            if(id === 'gold') { b.style.background = 'linear-gradient(135deg, #fbc531, #e1b12c)'; }
+            if(id === 'ruby') { b.style.background = 'linear-gradient(135deg, #ff416c, #ff4b2b)'; }
+            if(id === 'emerald') { b.style.background = 'linear-gradient(135deg, #2ecc71, #27ae60)'; }
+            if(id === 'custom') { let cs = localStorage.getItem('cs'); if(cs) { b.style.background = `url(${cs}) center/cover no-repeat`; b.innerText = ''; } }
+            localStorage.setItem('skin', id);
+        };
+        
+        window.uploadCustomSkin = function(e) { 
+            const f = e.target.files[0]; 
+            if(f) { 
+                const r = new FileReader(); r.onload = (ev) => { 
+                    try { localStorage.setItem('cs', ev.target.result); applySkin('custom'); } 
+                    catch(err) { alert("Картинка тяжеловата!"); const b = document.getElementById('click-target'); b.className=''; b.style.cssText=''; b.style.background = `url(${ev.target.result}) center/cover no-repeat`; b.innerText = ''; } 
+                }; r.readAsDataURL(f); 
+            } 
+        };
+
+        document.body.addEventListener('click', function() { if(bgMusic.paused && bgMusic.src && bgMusic.src !== window.location.href) bgMusic.play().catch(e=>{}); }, {once:true});
+
+        const hash = p => btoa(encodeURIComponent(p + "_omniverse20"));
+        document.getElementById('btn-login').addEventListener('click', () => auth('login'));
+        document.getElementById('btn-reg').addEventListener('click', () => auth('reg'));
+        document.getElementById('toggle-reg').addEventListener('click', () => { document.getElementById('form-login').style.display='none'; document.getElementById('form-reg').style.display='block'; });
+        document.getElementById('toggle-login').addEventListener('click', () => { document.getElementById('form-reg').style.display='none'; document.getElementById('form-login').style.display='block'; });
+
+        async function auth(type, autoU, autoP) {
+            let u = autoU || document.getElementById(type === 'login' ? 'l-u' : 'r-u').value.trim().toLowerCase();
+            let p = autoP || document.getElementById(type === 'login' ? 'l-p' : 'r-p').value.trim();
+            if(u.length < 3) return alert("Логин от 3 символов!");
+            document.getElementById('auth-status').innerText = "Вход...";
+            try {
+                let res = await fetch(`${FIREBASE_URL}/accounts/${u}.json?_=${Date.now()}`, { cache: 'no-store' }); 
+                let data = await res.json();
+                if(type === 'reg') {
+                    if(data) return document.getElementById('auth-status').innerText = "Имя занято!";
+                    await fetch(`${FIREBASE_URL}/accounts/${u}.json`, { method: 'PUT', body: JSON.stringify({ password: hash(p), saveData: "{}", isVip: false }) });
+                    finishAuth(u, p, "{}", false);
+                } else {
+                    if(!data || data.password !== hash(p)) { localStorage.removeItem('NeonZeroAuth'); document.getElementById('auth-screen').style.display='flex'; return document.getElementById('auth-status').innerText = "Неверный код!"; }
+                    finishAuth(u, p, data.saveData, data.isVip);
+                }
+            } catch(e) { document.getElementById('auth-status').innerText = "Ошибка сети."; document.getElementById('auth-screen').style.display='flex'; }
+        }
+
+        function updateVipUI() {
+            if(isPlayerVip) {
+                document.getElementById('vip-promo-box').style.display = 'none';
+                document.querySelectorAll('#vip-skins-list .locked').forEach(el => el.classList.remove('locked'));
+                document.querySelectorAll('#vip-bgs-list .locked').forEach(el => el.classList.remove('locked'));
+                document.getElementById('vip-status-box').style.display = 'flex'; 
+                document.getElementById('vip-settings-section').style.display = 'block';
+                updateVipTogglesUI();
+            } else {
+                document.getElementById('vip-promo-box').style.display = 'block';
+                document.getElementById('vip-status-box').style.display = 'none';
+                document.getElementById('vip-settings-section').style.display = 'none';
+            }
+        }
+
+        function finishAuth(u, p, cloudSave, vipStatus) {
+            playerName = u; isLoggedIn = true; isPlayerVip = !!vipStatus; 
+            localStorage.setItem('NeonZeroAuth', JSON.stringify({u: u, p: p}));
+            document.getElementById('name-screen').style.display = 'none';
+            updateVipUI();
+
+            let cData = null, lData = null;
+            try { 
+                cData = cloudSave; 
+                if(typeof cData === 'string') cData = JSON.parse(cData); 
+                if(typeof cData === 'string') cData = JSON.parse(cData); 
+            } catch(e) {}
+            try { 
+                let localStr = localStorage.getItem('UT_Save_' + u);
+                if(localStr) lData = JSON.parse(localStr); 
+            } catch(e) {}
+
+            let s = null;
+            if(cData && lData && typeof cData === 'object' && typeof lData === 'object') {
+                s = (Number(lData.te||0) > Number(cData.te||0)) ? lData : cData;
+            } else {
+                s = cData || lData;
+            }
+
+            if(s && typeof s === 'object') {
+                scoreVal = Math.floor(s.s)||0; crystalsVal = Math.floor(s.c)||0; rbLevel = Math.floor(s.rl)||0; 
+                tcEarned = Math.floor(s.te)||0; tcClicks = Math.floor(s.tc)||0; playTime = Number(s.pt)||0;
+                if(s.bl) { for(let i=0; i<s.bl.length; i++) bLevels[i] = Number(s.bl[i]) || 0; }
+                if(s.pl) { for(let i=0; i<s.pl.length; i++) pLevels[i] = Number(s.pl[i]) || 0; }
+                if(s.a) { for(let i=0; i<s.a.length; i++) aClaimed[i] = !!s.a[i]; }
+            }
+
+            let ls = (s && s.ls) ? Number(s.ls) : Date.now();
+            let now = Date.now();
+            let diffSec = Math.floor((now - ls) / 1000);
+            
+            if (diffSec >= 60 && getBaseCps() > 0) {
+                let baseCps = getBaseCps();
+                if(isPlayerVip) baseCps *= 2; 
+
+                let afkMult = 0.3 + (Number(pLevels[7]) || 0) * 0.3; 
+                if(Number(pLevels[17]) > 0) afkMult *= Math.pow(2, Number(pLevels[17])); 
+                if(Number(pLevels[24]) > 0) afkMult *= Math.pow(5, Number(pLevels[24])); 
+                
+                let offlineEarned = baseCps * afkMult * diffSec;
+                
+                scoreVal += offlineEarned;
+                tcEarned += offlineEarned;
+                
+                document.getElementById('offline-time').innerText = formatTime(diffSec);
+                document.getElementById('offline-earned').innerText = '+' + formatNum(offlineEarned);
+                
+                setTimeout(() => openModal('offline-modal'), 1000);
+            }
+
+            renderProfile(); updateAll();
+        }
+
+        function saveGame(toCloud = false) {
+            if(!isLoggedIn) return;
+            const data = { s: scoreVal, c: crystalsVal, rl: rbLevel, te: tcEarned, tc: tcClicks, pt: Math.floor(playTime), bl: bLevels, pl: pLevels, a: aClaimed, ls: Date.now() };
+            
+            try { localStorage.setItem('UT_Save_' + playerName, JSON.stringify(data)); } catch(e){}
+
+            if(toCloud) {
+                fetch(`${FIREBASE_URL}/accounts/${playerName}/saveData.json`, { 
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(JSON.stringify(data)) 
+                });
+                fetch(`${FIREBASE_URL}/leaderboard/${playerName}.json`, { 
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: playerName, score: Math.floor(tcEarned), rebirths: rbLevel, playTime: Math.floor(playTime) }) 
+                });
+            }
+        }
+
+        function forceSaveBtn() { saveGame(true); let ind = document.getElementById('save-indicator'); ind.style.opacity = '1'; setTimeout(()=>ind.style.opacity='0', 2500); }
+        function logout() { localStorage.removeItem('NeonZeroAuth'); location.reload(); }
+        function exportSave() { saveGame(true); const data = { s: scoreVal, c: crystalsVal, rl: rbLevel, te: tcEarned, tc: tcClicks, pt: Math.floor(playTime), bl: bLevels, pl: pLevels, a: aClaimed, ls: Date.now() }; let enc = btoa(encodeURIComponent(JSON.stringify(data))); navigator.clipboard.writeText(enc).then(()=>alert("КОД СКОПИРОВАН!")).catch(()=>prompt("Скопируйте:", enc)); }
+        function importSave() { let code = prompt("Код сохранения:"); if(code) { try { let dec = decodeURIComponent(atob(code)); JSON.parse(dec); fetch(`${FIREBASE_URL}/accounts/${playerName}/saveData.json`, { method: 'PUT', body: JSON.stringify(dec) }).then(()=>location.reload()); } catch(e) { alert("Ошибка кода!"); } } }
+        function hardReset() { if(confirm("УДАЛИТЬ ВСЁ?")) { localStorage.clear(); location.reload(); } }
+
+        let leaderSort = 'score';
+        function openModal(id) { document.getElementById('overlay').style.display='block'; document.getElementById(id).classList.add('open'); syncUI(); if(id==='leaderboard-modal') renderLeaderboard(leaderSort || 'score'); if(id==='profile-modal') renderProfile(); }
+        function closeAll() { document.querySelectorAll('.modal').forEach(m=>m.classList.remove('open')); document.getElementById('overlay').style.display='none'; }
+
+        window.addEventListener('beforeunload', () => { if(isLoggedIn) saveGame(true); });
+        document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden' && isLoggedIn) saveGame(true); });
+
+        window.onload = async () => {
+            try { initLists(); } catch (e) {}
+            let savedAvatar = localStorage.getItem('avatar'); if(savedAvatar) applyAvatar(savedAvatar);
+            let savedVideoBg = localStorage.getItem('videoBg'); let savedBgClass = localStorage.getItem('playerBgClass');
+            if (savedVideoBg) { setVideoBg(savedVideoBg); } else if (savedBgClass && savedBgClass !== 'default') { setBgClass(savedBgClass); } else if(localStorage.getItem('bg')) { document.getElementById('bg-layer').style.background = localStorage.getItem('bg'); }
+            if(localStorage.getItem('mus')) bgMusic.src = localStorage.getItem('mus');
+            
+            let authData = localStorage.getItem('NeonZeroAuth');
+            if(authData) { let p = JSON.parse(authData); document.getElementById('name-screen').style.display='flex'; document.getElementById('auth-status').innerText = "Вход..."; auth('login', p.u, p.p); } 
+            else { document.getElementById('name-screen').style.display='flex'; }
+            setTimeout(() => { if(localStorage.getItem('skin')) applySkin(localStorage.getItem('skin')); }, 1500);
+        };
+
+        setInterval(() => { 
+            if(!isLoggedIn) return;
+            playTime += 0.1;
+            if(getCpsVal() > 0) { 
+                let gain = getCpsVal() / 10; 
+                if(document.hidden) {
+                    let afkMult = 0.3 + (Number(pLevels[7]) || 0) * 0.3;
+                    if(Number(pLevels[17]) > 0) afkMult *= Math.pow(2, Number(pLevels[17]));
+                    if(Number(pLevels[24]) > 0) afkMult *= Math.pow(5, Number(pLevels[24])); 
+                    gain *= afkMult; 
+                }
+                scoreVal += gain; tcEarned += gain; 
+            } 
+            updateFast(); 
+        }, 100);
+
+        setInterval(() => {
+            if(isLoggedIn && document.getElementById('profile-modal').classList.contains('open')) { renderProfile(); }
+        }, 1000);
+
+        setInterval(() => { if(isPlayerVip && !document.hidden && autoClickerEnabled) { tap(null); } }, 200);
+        setInterval(() => { saveGame(false); }, 2000);
+        setInterval(() => { saveGame(true); }, 10000);
+    </script>
+</body>
+</html>
